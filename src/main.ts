@@ -34,7 +34,7 @@ async function bootstrap() {
     });
 
     //cookie middleware
-    app.use(cookieParser());
+    app.use(cookieParser());console.log('🔥 APP STARTED');
 
 
   await app.listen(process.env.PORT ?? 3000);

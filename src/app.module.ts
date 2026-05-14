@@ -1,5 +1,4 @@
 import { Module } from '@nestjs/common';
-import { AppController } from './app.controller';
 import { AppService } from './app.service';
 import * as Joi from 'joi';
 import {ConfigModule, ConfigService} from "@nestjs/config";
@@ -9,6 +8,7 @@ import {CloudinaryModule} from "./file-upload/cloudinary/cloudinary.module";
 import { AuthModule } from './auth/auth.module';
 import {ThrottlerGuard, ThrottlerModule} from "@nestjs/throttler";
 import {APP_GUARD} from "@nestjs/core";
+import { CategoryModule } from './category/category.module';
 
 @Module({
   imports: [
@@ -49,10 +49,11 @@ import {APP_GUARD} from "@nestjs/core";
 
     FileUploadModule,
     CloudinaryModule,
-    AuthModule
+    AuthModule,
+    CategoryModule
 
   ],
-  controllers: [AppController],
+  controllers: [],
   providers: [
       {
     provide: APP_GUARD,

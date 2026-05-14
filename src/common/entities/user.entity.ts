@@ -10,7 +10,7 @@ import {
 
 import { BaseEntity } from './base.entity';
 import {Role} from "./roles.entity";
-import {StaffProfile} from "./staff-profile.entity";
+import {StaffProfile} from "./staff_profile.entity";
 
 @Entity('users')
 export class User extends BaseEntity {

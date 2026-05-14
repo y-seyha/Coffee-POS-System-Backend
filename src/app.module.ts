@@ -6,9 +6,19 @@ import {ConfigModule, ConfigService} from "@nestjs/config";
 import {TypeOrmModule} from "@nestjs/typeorm";
 import { FileUploadModule } from './file-upload/file-upload.module';
 import {CloudinaryModule} from "./file-upload/cloudinary/cloudinary.module";
+import { AuthModule } from './auth/auth.module';
+import {ThrottlerGuard, ThrottlerModule} from "@nestjs/throttler";
+import {APP_GUARD} from "@nestjs/core";
 
 @Module({
   imports: [
+    ThrottlerModule.forRoot([
+      {
+        ttl: 60,
+        limit: 5,
+      },
+    ]),
+
     ConfigModule.forRoot({
       isGlobal: true,
       validationSchema: Joi.object({
@@ -38,10 +48,16 @@ import {CloudinaryModule} from "./file-upload/cloudinary/cloudinary.module";
     }),
 
     FileUploadModule,
-    CloudinaryModule
+    CloudinaryModule,
+    AuthModule
 
   ],
   controllers: [AppController],
-  providers: [AppService],
+  providers: [
+      {
+    provide: APP_GUARD,
+    useClass: ThrottlerGuard,
+  },
+    AppService],
 })
 export class AppModule {}

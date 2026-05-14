@@ -30,7 +30,6 @@ export class StaffProfile extends BaseEntity {
     @Column({ type: 'text' })
     address: string;
 
-    // 🔥 USER RELATION
     @OneToOne(() => User, (user) => user.staffProfile, {
         onDelete: 'CASCADE',
     })

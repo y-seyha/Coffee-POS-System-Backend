@@ -4,6 +4,8 @@ import { AppService } from './app.service';
 import * as Joi from 'joi';
 import {ConfigModule, ConfigService} from "@nestjs/config";
 import {TypeOrmModule} from "@nestjs/typeorm";
+import { FileUploadModule } from './file-upload/file-upload.module';
+import {CloudinaryModule} from "./file-upload/cloudinary/cloudinary.module";
 
 @Module({
   imports: [
@@ -34,6 +36,9 @@ import {TypeOrmModule} from "@nestjs/typeorm";
             : false,
       }),
     }),
+
+    FileUploadModule,
+    CloudinaryModule
 
   ],
   controllers: [AppController],

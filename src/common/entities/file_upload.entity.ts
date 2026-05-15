@@ -9,6 +9,7 @@ import {
 
 import { User } from './user.entity';
 import {BaseEntity} from "./base.entity";
+import {Product} from "./product.entity";
 
 @Entity('files')
 export class File extends BaseEntity {
@@ -39,4 +40,11 @@ export class File extends BaseEntity {
     })
     @JoinColumn({ name: 'uploader_id' })
     uploader: User;
+
+    @ManyToOne(() => Product, (product) => product.images, {
+        onDelete: 'CASCADE',
+        nullable: true,
+    })
+    @JoinColumn({ name: 'product_id' })
+    product?: Product | null;
 }

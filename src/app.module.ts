@@ -9,6 +9,8 @@ import { AuthModule } from './auth/auth.module';
 import {ThrottlerGuard, ThrottlerModule} from "@nestjs/throttler";
 import {APP_GUARD} from "@nestjs/core";
 import { CategoryModule } from './category/category.module';
+import { ProductModule } from './product/product.module';
+import { VariantManagementModule } from './variant-management/variant-management.module';
 
 @Module({
   imports: [
@@ -50,7 +52,9 @@ import { CategoryModule } from './category/category.module';
     FileUploadModule,
     CloudinaryModule,
     AuthModule,
-    CategoryModule
+    CategoryModule,
+    ProductModule,
+    VariantManagementModule
 
   ],
   controllers: [],

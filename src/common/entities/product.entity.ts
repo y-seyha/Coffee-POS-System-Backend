@@ -9,13 +9,17 @@ import {
 } from 'typeorm';
 
 import { Category } from './category.entity';
-import { ProductVariant } from './product_variant.entity';
 import {BaseEntity} from "./base.entity";
+import {File} from "./file_upload.entity";
+import {ProductVariantGroup} from "./product_variant_groups.entity";
 
 @Entity('products')
 export class Product extends BaseEntity {
     @PrimaryGeneratedColumn()
     id: number;
+
+    @Column({ name: 'category_id' })
+    category_id: number;
 
     @ManyToOne(() => Category, (category) => category.products, {
         nullable: false,
@@ -41,14 +45,21 @@ export class Product extends BaseEntity {
     @Column('decimal', { precision: 10, scale: 2, nullable: true })
     cost_price: number;
 
-    @Column({ nullable: true })
-    image_url: string;
-
     @Column({ default: true })
     is_available: boolean;
 
-    @OneToMany(() => ProductVariant, (variant) => variant.product, {
-        cascade: true,
-    })
-    variants: ProductVariant[];
+    @Column({ default: true })
+    is_active: boolean;
+
+    @Column({ default: 0 })
+    sort_order: number;
+
+    @OneToMany(
+        () => ProductVariantGroup,
+        (productVariantGroup) => productVariantGroup.product,
+    )
+    variant_groups: ProductVariantGroup[];
+
+    @OneToMany(() => File, (file) => file.product)
+    images: File[];
 }

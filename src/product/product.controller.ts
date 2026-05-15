@@ -1,0 +1,127 @@
+import {
+    Controller,
+    Get,
+    Post,
+    Patch,
+    Delete,
+    Body,
+    Param,
+    Query,
+    ParseIntPipe,
+    Logger,
+    UseInterceptors,
+    UploadedFiles,
+    Req,
+    UseGuards,
+} from '@nestjs/common';
+import type { Request } from 'express';
+import { ProductService } from './product.service';
+import { CreateProductDto } from './dto/create-product.dto';
+import { UpdateProductDto } from './dto/update-product.dto';
+import { GetProductsQueryDto } from './dto/get-products.query.dto';
+import {
+    ApiOperation,
+    ApiTags,
+    ApiBearerAuth,
+} from '@nestjs/swagger';
+import { FilesInterceptor } from '@nestjs/platform-express';
+import { JwtAuthGuard } from '../auth/guard/jwt-auth.guard';
+import { Roles } from '../auth/decorator/roles.decorator';
+import {RoleGuard} from "../auth/guard/role.guard";
+
+@ApiTags('Products')
+@Controller('products')
+export class ProductController {
+    private readonly logger = new Logger(ProductController.name);
+
+    constructor(private readonly productService: ProductService) {}
+
+    @Get()
+    @UseGuards(JwtAuthGuard, RoleGuard)
+    @Roles('admin')
+    @ApiBearerAuth('access-token')
+    @ApiOperation({
+        summary: 'Get all products',
+        description:
+            'Retrieve paginated product list with filters (search, category, sorting)',
+    })
+    findAll(@Query() query: GetProductsQueryDto) {
+        return this.productService.findAll(query);
+    }
+
+    @Get(':id')
+    @UseGuards(JwtAuthGuard, RoleGuard)
+    @Roles('admin')
+    @ApiBearerAuth('access-token')
+    @ApiOperation({
+        summary: 'Get product by ID',
+        description:
+            'Fetch single product with category, images, and variant groups',
+    })
+    findOne(@Param('id', ParseIntPipe) id: number) {
+        return this.productService.findOne(id);
+    }
+
+    @Post()
+    @UseGuards(JwtAuthGuard, RoleGuard)
+    @Roles('admin')
+    @ApiBearerAuth('access-token')
+    @UseInterceptors(FilesInterceptor('files'))
+    @ApiOperation({
+        summary: 'Create product (Admin only)',
+        description:
+            'Create product with optional image upload (multipart/form-data)',
+    })
+    create(
+        @UploadedFiles() files: Express.Multer.File[],
+        @Body() dto: CreateProductDto,
+        @Req() req: Request,
+    ) {
+        const userId = (req as any).user?.id;
+
+        return this.productService.create(dto, files, userId);
+    }
+
+    @Patch(':id')
+    @UseGuards(JwtAuthGuard, RoleGuard)
+    @Roles('admin')
+    @ApiBearerAuth('access-token')
+    @ApiOperation({
+        summary: 'Update product (Admin only)',
+        description:
+            'Update product fields such as name, price, SKU, category',
+    })
+    update(
+        @Param('id', ParseIntPipe) id: number,
+        @Body() dto: UpdateProductDto,
+    ) {
+        return this.productService.update(id, dto);
+    }
+
+    @Delete(':id')
+    @UseGuards(JwtAuthGuard, RoleGuard)
+    @Roles('admin')
+    @ApiBearerAuth('access-token')
+    @ApiOperation({
+        summary: 'Delete product (Admin only)',
+        description: 'Remove product permanently from database',
+    })
+    remove(@Param('id', ParseIntPipe) id: number) {
+        return this.productService.remove(id);
+    }
+
+    @Get('category/:categoryId')
+    @UseGuards(JwtAuthGuard, RoleGuard)
+    @Roles('admin')
+    @ApiBearerAuth('access-token')
+    @ApiOperation({
+        summary: 'Get products by category',
+        description: 'Fetch all products belonging to a specific category',
+    })
+    findByCategory(
+        @Param('categoryId', ParseIntPipe) categoryId: number,
+    ) {
+        this.logger.log(`GET /products/category/${categoryId}`);
+        return this.productService.findByCategory(categoryId);
+    }
+}

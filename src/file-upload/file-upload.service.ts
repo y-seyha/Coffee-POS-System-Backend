@@ -18,22 +18,26 @@ export class FileUploadService {
         private readonly fileRepo: Repository<File>,
     ) {}
 
-    // =========================
-    // Upload single file
-    // =========================
     async uploadSingleFile(data: {
         file: Express.Multer.File;
         userId: number;
+        productId?: number;
         description?: string;
     }) {
         try {
-            const { file, userId, description } = data;
+            const {
+                file,
+                userId,
+                productId,
+                description,
+            } = data;
 
             if (!file) {
                 throw new NotFoundException('File is required');
             }
 
-            const result = await this.cloudinaryService.uploadFile(file);
+            const result =
+                await this.cloudinaryService.uploadFile(file);
 
             const newFile = this.fileRepo.create({
                 originalName: file.originalname,
@@ -42,7 +46,12 @@ export class FileUploadService {
                 url: result.secure_url,
                 publicId: result.public_id,
                 description,
+
                 uploader: { id: userId } as any,
+
+                product: productId
+                    ? ({ id: productId } as any)
+                    : null,
             });
 
             return await this.fileRepo.save(newFile);
@@ -53,9 +62,6 @@ export class FileUploadService {
         }
     }
 
-    // =========================
-    // Upload multiple files
-    // =========================
     async uploadMultipleFiles(data: {
         files: Express.Multer.File[];
         userId: number;
@@ -82,9 +88,6 @@ export class FileUploadService {
         }
     }
 
-    // =========================
-    // Delete file
-    // =========================
     async deleteFile(id: string) {
         try {
             const file = await this.fileRepo.findOne({ where: { id } });
@@ -105,9 +108,6 @@ export class FileUploadService {
         }
     }
 
-    // =========================
-    // Find all files
-    // =========================
     async findAll() {
         try {
             return await this.fileRepo.find({
@@ -121,9 +121,6 @@ export class FileUploadService {
         }
     }
 
-    // =========================
-    // Find one file
-    // =========================
     async findOne(id: string) {
         try {
             const file = await this.fileRepo.findOne({

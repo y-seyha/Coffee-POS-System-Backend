@@ -18,6 +18,11 @@ export class Category extends BaseEntity {
     @Column({ type: 'text', nullable: true })
     description: string;
 
+    @Column({ default: true })
+    is_active: boolean;
+
+    @Column({ default: 0 })
+    sort_order: number;
 
     @OneToMany(() => Product, (product) => product.category)
     products: Product[];

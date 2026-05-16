@@ -28,6 +28,7 @@ export class CategoryService {
                 relations: ['products'],
                 order: { id: 'DESC' },
             });
+
         } catch (error) {
             throw new InternalServerErrorException('Failed to fetch categories');
         }
@@ -68,7 +69,13 @@ export class CategoryService {
     async remove(id: number) {
         try {
             const category = await this.findOne(id);
-            return await this.categoryRepo.remove(category);
+           await this.categoryRepo.remove(category);
+
+            return {
+                success: true,
+                message: 'Category deleted successfully',
+                deletedCategoryId: id,
+            };
         } catch (error) {
             throw new InternalServerErrorException('Failed to delete category');
         }

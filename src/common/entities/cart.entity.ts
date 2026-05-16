@@ -1,25 +1,20 @@
-import {Entity, PrimaryGeneratedColumn, Column, OneToMany, Index} from 'typeorm';
+import {Entity, PrimaryGeneratedColumn, Column, OneToMany, Index, ManyToOne, JoinColumn} from 'typeorm';
 import {BaseEntity} from "./base.entity";
 import {CartItem} from "./cart_items.entity";
+import {User} from "./user.entity";
 
 @Entity('carts')
-export class Cart extends BaseEntity
-{
+export class Cart extends BaseEntity {
     @PrimaryGeneratedColumn()
     id: number;
 
-    @Index({ unique: true })
     @Column()
-    session_id: string;
-
-    @Column({ nullable: true })
-    customer_id: number;
-
-    @Column({ nullable: true })
     staff_id: number;
 
-    @OneToMany(() => CartItem, (item) => item.cart, {
-        cascade: true,
-    })
+    @ManyToOne(() => User, { nullable: true, onDelete: 'SET NULL' })
+    @JoinColumn({ name: 'staff_id' })
+    staff: User;
+
+    @OneToMany(() => CartItem, (item) => item.cart)
     items: CartItem[];
 }

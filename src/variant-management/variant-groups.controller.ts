@@ -6,7 +6,7 @@ import {
     Param,
     ParseIntPipe,
     Patch,
-    Post,
+    Post, UseGuards,
 } from '@nestjs/common';
 
 import {
@@ -18,9 +18,13 @@ import {
 import { VariantGroupsService } from './variant-groups.service';
 import {CreateVariantGroupDto} from "./dto/variant-groups/create_variant_group.dto";
 import {UpdateVariantGroupDto} from "./dto/variant-groups/update_variant_group.dto";
+import {JwtAuthGuard} from "../auth/guard/jwt-auth.guard";
+import {RoleGuard} from "../auth/guard/role.guard";
+import {Roles} from "../auth/decorator/roles.decorator";
 
 
-
+@UseGuards(JwtAuthGuard, RoleGuard)
+@Roles('admin')
 @ApiTags('Admin Variant Groups')
 @Controller('admin/variant-groups')
 export class VariantGroupsController {

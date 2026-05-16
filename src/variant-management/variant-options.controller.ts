@@ -6,7 +6,7 @@ import {
     Param,
     ParseIntPipe,
     Patch,
-    Post,
+    Post, UseGuards,
 } from '@nestjs/common';
 
 import {
@@ -18,8 +18,12 @@ import {
 import { VariantOptionsService } from './variant-options.service';
 import {CreateVariantOptionDto} from "./dto/variant-options/create_variant_option.dto";
 import {UpdateVariantOptionDto} from "./dto/variant-options/update_variant_option.dto";
+import {JwtAuthGuard} from "../auth/guard/jwt-auth.guard";
+import {RoleGuard} from "../auth/guard/role.guard";
+import {Roles} from "../auth/decorator/roles.decorator";
 
-
+@UseGuards(JwtAuthGuard, RoleGuard)
+@Roles('admin')
 @ApiTags('Admin Variant Options')
 @Controller('admin/variant-options')
 export class VariantOptionsController {

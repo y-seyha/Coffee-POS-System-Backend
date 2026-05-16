@@ -13,19 +13,18 @@ import { Role } from '../common/entities/roles.entity';
 import { MailerService } from '../utils/mailer';
 
 import { JwtStrategy } from './strategies/jwt.strategy';
-import {PassportModule} from "@nestjs/passport";
+import {ConfigModule, ConfigService} from "@nestjs/config";
 
 @Module({
   imports: [
-    TypeOrmModule.forFeature([User,Role,]),
-
-    PassportModule.register({ defaultStrategy: 'jwt' }),
-
-    JwtModule.register({
-      secret: process.env.JWT_SECRET || 'super_secret_key',
-      signOptions: {
-        expiresIn: '15m',
-      },
+    TypeOrmModule.forFeature([User,Role]),
+    JwtModule.registerAsync({
+      imports: [ConfigModule],
+      inject: [ConfigService],
+      useFactory: (config: ConfigService) => ({
+        secret: config.get<string>('JWT_SECRET'),
+        signOptions: { expiresIn: '15m' },
+      }),
     }),
   ],
 
@@ -39,7 +38,7 @@ import {PassportModule} from "@nestjs/passport";
 
   exports: [
     AuthService,
-    JwtModule,
+
   ],
 })
 export class AuthModule {}

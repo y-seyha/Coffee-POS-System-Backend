@@ -65,4 +65,13 @@ export class CreateVariantOptionDto {
     @IsOptional()
     @IsBoolean({ message: 'is_active must be a boolean' })
     is_active?: boolean;
+
+    @ApiPropertyOptional({
+        example: 1,
+        description: 'Sort order inside variant group',
+    })
+    @IsOptional()
+    @IsNumber({}, { message: 'sort_order must be a number' })
+    @Min(0)
+    sort_order?: number;
 }

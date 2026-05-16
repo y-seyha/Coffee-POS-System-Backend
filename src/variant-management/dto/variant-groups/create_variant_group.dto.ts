@@ -4,10 +4,11 @@ import {
     IsOptional,
     IsString,
     MaxLength,
-    Matches,
+    Matches, IsInt, Min,
 } from 'class-validator';
 
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
+import {Type} from "class-transformer";
 
 export class CreateVariantGroupDto {
     @ApiProperty({
@@ -55,4 +56,14 @@ export class CreateVariantGroupDto {
         message: 'is_active must be a boolean value',
     })
     is_active?: boolean;
+
+    @ApiPropertyOptional({
+        example: 1,
+        description: 'Sort order of variant group',
+    })
+    @IsOptional()
+    @Type(() => Number)
+    @IsInt()
+    @Min(0)
+    sort_order?: number;
 }

@@ -22,12 +22,14 @@ import { GetProductsQueryDto } from './dto/get-products.query.dto';
 import {
     ApiOperation,
     ApiTags,
-    ApiBearerAuth,
+    ApiBearerAuth, ApiResponse,
 } from '@nestjs/swagger';
 import { FilesInterceptor } from '@nestjs/platform-express';
 import { JwtAuthGuard } from '../auth/guard/jwt-auth.guard';
 import { Roles } from '../auth/decorator/roles.decorator';
 import {RoleGuard} from "../auth/guard/role.guard";
+import {AttachProductVariantGroupsDto} from "./dto/attach_variant_group.dto";
+import {ClientGetProductsQueryDto} from "./dto/client_get_product.dto";
 
 @ApiTags('Products')
 @Controller('products')
@@ -35,6 +37,16 @@ export class ProductController {
     private readonly logger = new Logger(ProductController.name);
 
     constructor(private readonly productService: ProductService) {}
+
+    //client
+    @Get('client')
+    @ApiOperation({
+        summary: 'Client product listing',
+        description: 'Public product list with search, filter, sort, pagination',
+    })
+    findClientProducts(@Query() query: ClientGetProductsQueryDto) {
+        return this.productService.clientFindAll(query);
+    }
 
     @Get()
     @UseGuards(JwtAuthGuard, RoleGuard)
@@ -47,6 +59,21 @@ export class ProductController {
     })
     findAll(@Query() query: GetProductsQueryDto) {
         return this.productService.findAll(query);
+    }
+
+    @Get('category/:categoryId')
+    @UseGuards(JwtAuthGuard, RoleGuard)
+    @Roles('admin')
+    @ApiBearerAuth('access-token')
+    @ApiOperation({
+        summary: 'Get products by category',
+        description: 'Fetch all products belonging to a specific category',
+    })
+    findByCategory(
+        @Param('categoryId', ParseIntPipe) categoryId: number,
+    ) {
+        this.logger.log(`GET /products/category/${categoryId}`);
+        return this.productService.findByCategory(categoryId);
     }
 
     @Get(':id')
@@ -98,6 +125,30 @@ export class ProductController {
         return this.productService.update(id, dto);
     }
 
+    @Post(':id/variant-groups')
+    @UseGuards(JwtAuthGuard, RoleGuard)
+    @Roles('admin')
+    @ApiOperation({
+        summary: 'Attach variant groups to product',
+        description:
+            'Replace all existing variant groups and attach new ones to product',
+    })
+    @ApiBearerAuth('access-token')
+    @ApiResponse({
+        status: 200,
+        description: 'Variant groups attached successfully',
+    })
+    @ApiResponse({
+        status: 404,
+        description: 'Product not found',
+    })
+    attachVariantGroups(
+        @Param('id', ParseIntPipe) id: number,
+        @Body() dto: AttachProductVariantGroupsDto,
+    ) {
+        return this.productService.attachVariantGroups(id, dto);
+    }
+
     @Delete(':id')
     @UseGuards(JwtAuthGuard, RoleGuard)
     @Roles('admin')
@@ -110,18 +161,6 @@ export class ProductController {
         return this.productService.remove(id);
     }
 
-    @Get('category/:categoryId')
-    @UseGuards(JwtAuthGuard, RoleGuard)
-    @Roles('admin')
-    @ApiBearerAuth('access-token')
-    @ApiOperation({
-        summary: 'Get products by category',
-        description: 'Fetch all products belonging to a specific category',
-    })
-    findByCategory(
-        @Param('categoryId', ParseIntPipe) categoryId: number,
-    ) {
-        this.logger.log(`GET /products/category/${categoryId}`);
-        return this.productService.findByCategory(categoryId);
-    }
+
+
 }

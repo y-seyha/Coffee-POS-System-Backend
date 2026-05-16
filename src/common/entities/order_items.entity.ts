@@ -20,9 +20,6 @@ export class OrderItem extends BaseEntity {
     @Column()
     product_id: number;
 
-    @Column({ nullable: true })
-    variant_option_id: number;
-
     @Column()
     name: string;
 
@@ -37,9 +34,6 @@ export class OrderItem extends BaseEntity {
 
     @Column({ type: 'decimal', precision: 10, scale: 2 })
     total_price: number;
-
-    @Column({ type: 'text', nullable: true })
-    notes: string;
 
     @ManyToOne(() => Order, (order) => order.items, {
         onDelete: 'CASCADE',

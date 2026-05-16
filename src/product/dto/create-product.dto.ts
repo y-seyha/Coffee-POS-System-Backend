@@ -48,6 +48,7 @@ export class CreateProductDto {
         example: 1,
         description: 'Category ID this product belongs to',
     })
+    @Type(() => Number)
     @IsNumber({}, { message: 'category_id must be a number' })
     @IsPositive({ message: 'category_id must be greater than 0' })
     category_id: number;
@@ -73,6 +74,7 @@ export class CreateProductDto {
         example: 2.5,
         description: 'Base product price (variant price will adjust this)',
     })
+    @Type(() => Number)
     @IsNumber({}, { message: 'price must be a number' })
     @IsPositive({ message: 'price must be greater than 0' })
     price: number;
@@ -84,21 +86,4 @@ export class CreateProductDto {
     @IsOptional()
     @IsString({ message: 'description must be a string' })
     description?: string;
-
-    @ApiProperty({
-        description:
-            'List of variant groups attached to this product (SIZE, ICE, SUGAR)',
-        example: [
-            {
-                variant_group_id: 1,
-                is_required: true,
-                sort_order: 1,
-            },
-        ],
-        type: [ProductVariantGroupDto],
-    })
-    @IsArray({ message: 'variant_groups must be an array' })
-    @ValidateNested({ each: true })
-    @Type(() => ProductVariantGroupDto)
-    variant_groups: ProductVariantGroupDto[];
 }

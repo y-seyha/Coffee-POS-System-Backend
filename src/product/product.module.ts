@@ -4,6 +4,7 @@ import { ProductService } from './product.service';
 import {TypeOrmModule} from "@nestjs/typeorm";
 import {Product} from "../common/entities/product.entity";
 import {ProductVariantGroup} from "../common/entities/product_variant_groups.entity";
+import {FileUploadModule} from "../file-upload/file-upload.module";
 
 @Module({
   imports: [
@@ -11,6 +12,7 @@ import {ProductVariantGroup} from "../common/entities/product_variant_groups.ent
       Product,
       ProductVariantGroup,
     ]),
+    FileUploadModule
   ],
   controllers: [ProductController],
   providers: [ProductService],

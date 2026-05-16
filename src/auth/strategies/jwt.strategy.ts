@@ -7,16 +7,16 @@ import { Request } from 'express';
 export class JwtStrategy extends PassportStrategy(Strategy) {
     constructor() {
         super({
-            jwtFromRequest: ExtractJwt.fromExtractors([
-                (req: Request) => {
-                    return req?.cookies?.access_token ?? null;
-                },
-            ]),
+            jwtFromRequest: (req) => req?.cookies?.['access_token'],
+            ignoreExpiration: false,
             secretOrKey: process.env.JWT_SECRET || 'secret_key',
         });
     }
 
     async validate(payload: any) {
+        // console.log(' JWT PAYLOAD:', payload);
+        // console.log('STRATEGY SECRET:', process.env.JWT_SECRET || 'secret_key');
+
         return {
             id: payload.userId,
             email: payload.email,

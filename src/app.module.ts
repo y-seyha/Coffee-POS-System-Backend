@@ -11,6 +11,7 @@ import {APP_GUARD} from "@nestjs/core";
 import { CategoryModule } from './category/category.module';
 import { ProductModule } from './product/product.module';
 import { VariantManagementModule } from './variant-management/variant-management.module';
+import { CartModule } from './cart/cart.module';
 
 @Module({
   imports: [
@@ -54,7 +55,8 @@ import { VariantManagementModule } from './variant-management/variant-management
     AuthModule,
     CategoryModule,
     ProductModule,
-    VariantManagementModule
+    VariantManagementModule,
+    CartModule
 
   ],
   controllers: [],

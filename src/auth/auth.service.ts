@@ -224,6 +224,7 @@ export class AuthService {
     }
 
     private generateToken(user: User) {
+        console.log('JWT SECRET USED:', process.env.JWT_SECRET);
         const payload = {
             userId: user.id,
             email: user.email,

@@ -30,6 +30,7 @@ import { Roles } from '../auth/decorator/roles.decorator';
 @ApiBearerAuth()
 @Controller('categories')
 @UseGuards(JwtAuthGuard, RoleGuard)
+@UseGuards(JwtAuthGuard)
 @Roles('admin')
 export class CategoryController {
     constructor(private readonly categoryService: CategoryService) {}

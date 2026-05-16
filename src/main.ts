@@ -8,7 +8,7 @@ async function bootstrap() {
   const app = await NestFactory.create(AppModule);
 
   //use global /api
-    app.setGlobalPrefix('api');
+    app.setGlobalPrefix('api/v1');
 
   app.useGlobalPipes(
       new ValidationPipe({
@@ -34,7 +34,7 @@ async function bootstrap() {
     });
 
     //cookie middleware
-    app.use(cookieParser());console.log('🔥 APP STARTED');
+    app.use(cookieParser());
 
 
   await app.listen(process.env.PORT ?? 3000);

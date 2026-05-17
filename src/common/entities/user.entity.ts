@@ -52,5 +52,6 @@ export class User extends BaseEntity {
         cascade: true,
         onDelete: 'CASCADE',
     })
+    @JoinColumn()
     staffProfile: StaffProfile;
 }

@@ -10,6 +10,7 @@ import {BaseEntity} from "./base.entity";
 import {OrderItem} from "./order_items.entity";
 import {OrderAddress} from "./order_addresses.entity";
 import {OrderStatusHistory} from "./order_status_history.entity";
+import {Payment} from "./payment.entity";
 
 
 export enum OrderType {
@@ -82,4 +83,7 @@ export class Order extends BaseEntity {
 
     @OneToMany(() => OrderStatusHistory, (h) => h.order)
     status_history: OrderStatusHistory[];
+
+    @OneToMany(() => Payment, (payment) => payment.order)
+    payments: Payment[];
 }

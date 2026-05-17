@@ -13,6 +13,7 @@ import {Order} from "../common/entities/orders.entity";
 import {OrderItem} from "../common/entities/order_items.entity";
 import {OrderItemVariant} from "../common/entities/order_item_variants.entity";
 import {OrderStatusHistory} from "../common/entities/order_status_history.entity";
+import {Payment} from "../common/entities/payment.entity";
 
 
 @Module({
@@ -23,7 +24,7 @@ import {OrderStatusHistory} from "../common/entities/order_status_history.entity
       Product,
       CartItemVariant,
       VariantOption,
-      Order,OrderItem,OrderItemVariant,OrderStatusHistory
+      Order,OrderItem,OrderItemVariant,OrderStatusHistory,Payment
     ]),
   ],
   providers: [CartService],

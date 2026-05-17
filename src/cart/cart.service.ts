@@ -20,6 +20,7 @@ import {OrderItem} from "../common/entities/order_items.entity";
 import {OrderItemVariant} from "../common/entities/order_item_variants.entity";
 import {OrderStatusHistory} from "../common/entities/order_status_history.entity";
 import {CheckoutDto} from "./dto/checkout.dto";
+import {Payment, PaymentMethod, PaymentStatus} from "../common/entities/payment.entity";
 
 @Injectable()
 export class CartService {
@@ -37,6 +38,7 @@ export class CartService {
 
         @InjectRepository(VariantOption)
         private variantOptionRepo: Repository<VariantOption>,
+
     ) {}
 
     async getOrCreateCart(staffId: number) {
@@ -275,6 +277,8 @@ export class CartService {
             const statusHistoryRepo =
                 manager.getRepository(OrderStatusHistory);
 
+            const paymentRepo = manager.getRepository(Payment);
+
             if (dto.order_type === OrderType.DINEIN && !dto.table_id) {
                 throw new BadRequestException(
                     'table_id is required for DINEIN orders',
@@ -331,7 +335,10 @@ export class CartService {
 
                 staff_id: staffId,
 
-                order_status: OrderStatus.PENDING,
+                order_status:
+                    dto.payment_method === PaymentMethod.CASH
+                        ? OrderStatus.CONFIRMED
+                        : OrderStatus.PENDING,
 
                 subtotal,
                 discount_amount: discount,
@@ -394,12 +401,39 @@ export class CartService {
             await statusHistoryRepo.save({
                 order: savedOrder,
 
-                status: OrderStatus.PENDING,
+                status:
+                    dto.payment_method === PaymentMethod.CASH
+                        ? OrderStatus.CONFIRMED
+                        : OrderStatus.PENDING,
 
                 notes: 'Order created',
 
                 user: { id: staffId },
             });
+
+            const isCashPayment =
+                dto.payment_method === PaymentMethod.CASH;
+
+            const payment = paymentRepo.create({
+                payment_number: `PAY-${Date.now()}`,
+
+                order: savedOrder,
+
+                payment_method: dto.payment_method,
+
+                payment_status: isCashPayment
+                    ? PaymentStatus.PAID
+                    : PaymentStatus.PENDING,
+
+                amount: grandTotal,
+
+                ...(isCashPayment && {
+                    paid_at: new Date(),
+                }),
+            });
+
+            const savedPayment = await paymentRepo.save(payment);
+
 
             //clear cart
             await manager.getRepository(CartItem).delete({
@@ -418,6 +452,14 @@ export class CartService {
                     tax,
                     discount,
                     total: grandTotal,
+                },
+
+                payment: {
+                    id: savedPayment.id,
+                    payment_number: savedPayment.payment_number,
+                    method: savedPayment.payment_method,
+                    status: savedPayment.payment_status,
+                    amount: Number(savedPayment.amount),
                 },
             };
         });

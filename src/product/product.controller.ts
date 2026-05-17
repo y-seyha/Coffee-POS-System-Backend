@@ -48,9 +48,23 @@ export class ProductController {
         return this.productService.clientFindAll(query);
     }
 
+    //assign discount to products
+    @Post(':id/discount')
+    assignDiscount(
+        @Param('id', ParseIntPipe) id: number,
+        @Body('discountId') discountId: number,
+    ) {
+        return this.productService.assignDiscount(id, discountId);
+    }
+
+    @Delete(':id/discount')
+    removeDiscount(@Param('id', ParseIntPipe) id: number) {
+        return this.productService.removeDiscount(id);
+    }
+
     @Get()
     @UseGuards(JwtAuthGuard, RoleGuard)
-    @Roles('admin')
+    @Roles('ADMIN')
     @ApiBearerAuth('access-token')
     @ApiOperation({
         summary: 'Get all products',
@@ -63,7 +77,7 @@ export class ProductController {
 
     @Get('category/:categoryId')
     @UseGuards(JwtAuthGuard, RoleGuard)
-    @Roles('admin')
+    @Roles('ADMIN')
     @ApiBearerAuth('access-token')
     @ApiOperation({
         summary: 'Get products by category',
@@ -78,7 +92,7 @@ export class ProductController {
 
     @Get(':id')
     @UseGuards(JwtAuthGuard, RoleGuard)
-    @Roles('admin')
+    @Roles('ADMIN')
     @ApiBearerAuth('access-token')
     @ApiOperation({
         summary: 'Get product by ID',
@@ -91,7 +105,7 @@ export class ProductController {
 
     @Post()
     @UseGuards(JwtAuthGuard, RoleGuard)
-    @Roles('admin')
+    @Roles('ADMIN')
     @ApiBearerAuth('access-token')
     @UseInterceptors(FilesInterceptor('files'))
     @ApiOperation({
@@ -111,7 +125,7 @@ export class ProductController {
 
     @Patch(':id')
     @UseGuards(JwtAuthGuard, RoleGuard)
-    @Roles('admin')
+    @Roles('ADMIN')
     @ApiBearerAuth('access-token')
     @ApiOperation({
         summary: 'Update product (Admin only)',
@@ -127,7 +141,7 @@ export class ProductController {
 
     @Post(':id/variant-groups')
     @UseGuards(JwtAuthGuard, RoleGuard)
-    @Roles('admin')
+    @Roles('ADMIN')
     @ApiOperation({
         summary: 'Attach variant groups to product',
         description:
@@ -151,7 +165,7 @@ export class ProductController {
 
     @Delete(':id')
     @UseGuards(JwtAuthGuard, RoleGuard)
-    @Roles('admin')
+    @Roles('ADMIN')
     @ApiBearerAuth('access-token')
     @ApiOperation({
         summary: 'Delete product (Admin only)',

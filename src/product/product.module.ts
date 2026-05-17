@@ -5,12 +5,14 @@ import {TypeOrmModule} from "@nestjs/typeorm";
 import {Product} from "../common/entities/product.entity";
 import {ProductVariantGroup} from "../common/entities/product_variant_groups.entity";
 import {FileUploadModule} from "../file-upload/file-upload.module";
+import {Discount} from "../common/entities/discount.entity";
 
 @Module({
   imports: [
     TypeOrmModule.forFeature([
       Product,
       ProductVariantGroup,
+        Discount
     ]),
     FileUploadModule
   ],

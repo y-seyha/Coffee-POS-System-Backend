@@ -12,6 +12,7 @@ import { Category } from './category.entity';
 import {BaseEntity} from "./base.entity";
 import {File} from "./file_upload.entity";
 import {ProductVariantGroup} from "./product_variant_groups.entity";
+import {Discount} from "./discount.entity";
 
 @Entity('products')
 export class Product extends BaseEntity {
@@ -45,6 +46,9 @@ export class Product extends BaseEntity {
     @Column('decimal', { precision: 10, scale: 2, nullable: true })
     cost_price: number;
 
+    @Column({ nullable: true })
+    discount_id: number | null;
+
     @Column({ default: true })
     is_available: boolean;
 
@@ -62,4 +66,8 @@ export class Product extends BaseEntity {
 
     @OneToMany(() => File, (file) => file.product)
     images: File[];
+
+    @ManyToOne(() => Discount, { nullable: true, onDelete: 'SET NULL' })
+    @JoinColumn({ name: 'discount_id' })
+    discount: Discount;
 }

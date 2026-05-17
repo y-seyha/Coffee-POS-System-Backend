@@ -14,6 +14,7 @@ import { VariantManagementModule } from './variant-management/variant-management
 import { CartModule } from './cart/cart.module';
 import { RoleModule } from './role/role.module';
 import { UsersModule } from './users/users.module';
+import { DiscountsModule } from './discounts/discounts.module';
 
 @Module({
   imports: [
@@ -60,7 +61,8 @@ import { UsersModule } from './users/users.module';
     VariantManagementModule,
     CartModule,
     RoleModule,
-    UsersModule
+    UsersModule,
+    DiscountsModule
 
   ],
   controllers: [],

@@ -3,6 +3,7 @@ import {
     InternalServerErrorException,
     NotFoundException,
     Logger,
+    HttpException,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
@@ -15,7 +16,6 @@ export class FileUploadService {
 
     constructor(
         private readonly cloudinaryService: CloudinaryService,
-
         @InjectRepository(File)
         private readonly fileRepo: Repository<File>,
     ) {}
@@ -38,8 +38,7 @@ export class FileUploadService {
                 throw new NotFoundException('File is required');
             }
 
-            const result =
-                await this.cloudinaryService.uploadFile(file);
+            const result = await this.cloudinaryService.uploadFile(file);
 
             const newFile = this.fileRepo.create({
                 originalName: file.originalname,
@@ -48,11 +47,8 @@ export class FileUploadService {
                 url: result.secure_url,
                 publicId: result.public_id,
                 description,
-
                 uploader: { id: userId } as any,
-                product: productId
-                    ? ({ id: productId } as any)
-                    : null,
+                product: productId ? ({ id: productId } as any) : null,
             });
 
             const saved = await this.fileRepo.save(newFile);
@@ -67,6 +63,10 @@ export class FileUploadService {
                 `Upload single file failed | userId=${userId} | productId=${productId ?? 'N/A'}`,
                 error.stack,
             );
+
+            if (error instanceof HttpException) {
+                throw error;
+            }
 
             throw new InternalServerErrorException(
                 error?.message || 'Failed to upload file',
@@ -112,6 +112,10 @@ export class FileUploadService {
                 error.stack,
             );
 
+            if (error instanceof HttpException) {
+                throw error;
+            }
+
             throw new InternalServerErrorException(
                 error?.message || 'Failed to upload files',
             );
@@ -136,10 +140,11 @@ export class FileUploadService {
 
             return { message: 'File deleted successfully' };
         } catch (error) {
-            this.logger.error(
-                `Delete file failed | fileId=${id}`,
-                error.stack,
-            );
+            this.logger.error(`Delete file failed | fileId=${id}`, error.stack);
+
+            if (error instanceof HttpException) {
+                throw error;
+            }
 
             throw new InternalServerErrorException(
                 error?.message || 'Failed to delete file',
@@ -180,10 +185,11 @@ export class FileUploadService {
 
             return file;
         } catch (error) {
-            this.logger.error(
-                `Find file failed | fileId=${id}`,
-                error.stack,
-            );
+            this.logger.error(`Find file failed | fileId=${id}`, error.stack);
+
+            if (error instanceof HttpException) {
+                throw error;
+            }
 
             throw new InternalServerErrorException(
                 error?.message || 'Failed to fetch file',
@@ -192,9 +198,7 @@ export class FileUploadService {
     }
 
     async uploadToCloud(file: Express.Multer.File) {
-        this.logger.log(
-            `Uploading to Cloudinary | file=${file.originalname}`,
-        );
+        this.logger.log(`Uploading to Cloudinary | file=${file.originalname}`);
 
         try {
             return await this.cloudinaryService.uploadFile(file);

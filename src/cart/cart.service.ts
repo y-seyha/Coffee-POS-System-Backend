@@ -256,6 +256,7 @@ export class CartService {
             where: { cart: { id: cart.id } },
             relations: [
                 'product',
+                'product.discount',
                 'variants',
                 'variants.variant_group',
                 'variants.variant_option',
@@ -305,6 +306,7 @@ export class CartService {
                     'items.variants',
                     'items.variants.variant_group',
                     'items.variants.variant_option',
+                    'items.product.discount'
                 ],
             });
 
@@ -313,15 +315,8 @@ export class CartService {
             }
 
             //calculate total
-            const subtotal = cart.items.reduce(
-                (sum, item) => sum + Number(item.total_price),
-                0,
-            );
-
-            const discount = 0;
-            const tax = 0;
-
-            const grandTotal = subtotal + tax - discount;
+            const { subtotal, discount, tax, grandTotal } =
+                this.calculateCartSummary(cart);
 
             //create order
             const order = orderRepo.create({
@@ -521,6 +516,52 @@ export class CartService {
     }
 
     private normalizeCartResponse(cart: Cart, items: CartItem[]) {
+        const mappedItems = items.map(item => {
+            const breakdown = this.buildPriceBreakdown(item);
+
+            return {
+                id: item.id,
+
+                product: {
+                    id: item.product?.id,
+                    name: item.product?.name,
+                    base_price: Number(item.product?.price),
+                },
+
+                unit_price: breakdown.unit_price,
+                quantity: item.quantity,
+                total_price: breakdown.price_before_discount,
+
+                price_breakdown: breakdown,
+
+                variants: item.variants.map(v => ({
+                    group: v.variant_group?.name,
+                    option: v.variant_option?.name,
+                    price: Number(v.variant_option?.price_adjustment || 0),
+                })),
+            };
+        });
+
+        const subtotal = mappedItems.reduce(
+            (s, i) => s + i.price_breakdown.price_before_discount,
+            0,
+        );
+
+        const discount_total = mappedItems.reduce(
+            (s, i) => s + i.price_breakdown.discount,
+            0,
+        );
+
+        const grand_total = mappedItems.reduce(
+            (s, i) => s + i.price_breakdown.final_price,
+            0,
+        );
+
+        const quantity_total = mappedItems.reduce(
+            (s, i) => s + i.quantity,
+            0,
+        );
+
         return {
             cart: {
                 id: cart.id,
@@ -529,31 +570,91 @@ export class CartService {
                     name: cart.staff?.name,
                     email: cart.staff?.email,
                 },
-                items: items.map(item => ({
-                    id: item.id,
-                    product: {
-                        id: item.product?.id,
-                        name: item.product?.name,
-                        price: Number(item.product?.price),
-                    },
-                    unit_price: Number(item.unit_price),
-                    quantity: item.quantity,
-                    total_price: Number(item.total_price),
 
-                    variants: item.variants.map(v => ({
-                        group: v.variant_group?.name,
-                        option: v.variant_option?.name,
-                        price: Number(v.variant_option?.price_adjustment || 0),
-                    })),
-                })),
+                items: mappedItems,
             },
 
             summary: {
-                items_count: items.length,
-                quantity_total: items.reduce((s, i) => s + i.quantity, 0),
-                subtotal: items.reduce((s, i) => s + Number(i.total_price), 0),
-                total: items.reduce((s, i) => s + Number(i.total_price), 0),
+                items_count: mappedItems.length,
+                quantity_total,
+                subtotal,
+                discount_total,
+                grand_total,
+                tax: 0,
             },
+        };
+    }
+
+    private calculateItemDiscount(item: CartItem, price: number) {
+        const d = item.product?.discount;
+
+        if (!d || !d.is_active) return 0;
+
+        const value = Number(d.value);
+
+        if (d.type === 'PERCENTAGE') {
+            return (price * value) / 100;
+        }
+
+        if (d.type === 'FIXED') {
+            return value;
+        }
+
+        return 0;
+    }
+    private buildPriceBreakdown(item: CartItem) {
+        const basePrice = Number(item.product?.price || 0);
+
+        const addonPrice = (item.variants || []).reduce((sum, v) => {
+            return sum + Number(v.variant_option?.price_adjustment || 0);
+        }, 0);
+
+        const unitPrice = basePrice + addonPrice;
+
+        const quantity = item.quantity;
+
+        const priceBeforeDiscount = unitPrice * quantity;
+
+        const discount = this.calculateItemDiscount(item, priceBeforeDiscount);
+
+        const finalPrice = priceBeforeDiscount - discount;
+
+        return {
+            base_price: basePrice,
+            addon_price: addonPrice,
+            unit_price: unitPrice,
+            quantity,
+            price_before_discount: priceBeforeDiscount,
+            discount,
+            final_price: finalPrice,
+        };
+    }
+
+    private calculateCartSummary(cart: Cart) {
+        const items = cart.items;
+
+        const breakdowns = items.map(i => this.buildPriceBreakdown(i));
+
+        const subtotal = breakdowns.reduce(
+            (s, i) => s + i.price_before_discount,
+            0,
+        );
+
+        const discount = breakdowns.reduce(
+            (s, i) => s + i.discount,
+            0,
+        );
+
+        const grandTotal = breakdowns.reduce(
+            (s, i) => s + i.final_price,
+            0,
+        );
+
+        return {
+            subtotal,
+            discount,
+            tax: 0,
+            grandTotal,
         };
     }
 }

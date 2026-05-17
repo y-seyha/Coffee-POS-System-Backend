@@ -17,6 +17,7 @@ import {FileUploadService} from "../file-upload/file-upload.service";
 import {AttachProductVariantGroupsDto} from "./dto/attach_variant_group.dto";
 import { File } from '../common/entities/file_upload.entity';
 import {ClientGetProductsQueryDto} from "./dto/client_get_product.dto";
+import {Discount} from "../common/entities/discount.entity";
 
 @Injectable()
 export class ProductService {
@@ -29,6 +30,9 @@ export class ProductService {
         @InjectRepository(ProductVariantGroup)
         private readonly productVariantGroupRepo: Repository<ProductVariantGroup>,
 
+        @InjectRepository(Discount)
+        private readonly discountRepo: Repository<Discount>,
+
         private readonly fileUploadService: FileUploadService,
     ) {}
 
@@ -40,6 +44,7 @@ export class ProductService {
                 .leftJoinAndSelect('product.category', 'category')
                 .leftJoinAndSelect('product.images', 'images')
                 .leftJoinAndSelect('product.variant_groups', 'variant_groups')
+                .leftJoinAndSelect('product.discount', 'discount')
                 .skip((page - 1) * limit)
                 .take(limit)
                 .orderBy(`product.${sortBy}`, sortOrder as 'ASC' | 'DESC');
@@ -59,8 +64,13 @@ export class ProductService {
 
             this.logger.log(`Fetched products: ${items.length}`);
 
+            const data = items.map((p) => ({
+                ...p,
+                final_price: this.calculateFinalPrice(p),
+            }));
+
             return {
-                data: items,
+                data,
                 meta: {
                     total,
                     page,
@@ -77,7 +87,7 @@ export class ProductService {
         try {
             const product = await this.productRepo.findOne({
                 where: { id },
-                relations: ['category', 'images', 'variant_groups'],
+                relations: ['category', 'images', 'variant_groups','discount'],
             });
 
             if (!product) {
@@ -327,6 +337,7 @@ export class ProductService {
                 .createQueryBuilder('product')
                 .leftJoinAndSelect('product.images', 'images')
                 .leftJoinAndSelect('product.category', 'category')
+                .leftJoinAndSelect('product.discount', 'discount')
                 .where('product.is_active = true')
                 .andWhere('product.is_available = true')
                 .skip((page - 1) * limit)
@@ -384,5 +395,64 @@ export class ProductService {
             this.logger.error('Client product fetch failed', error.stack);
             throw new BadRequestException('Failed to fetch products');
         }
+    }
+
+
+    async assignDiscount(productId: number, discountId: number) {
+        const product = await this.productRepo.findOne({
+            where: { id: productId },
+        });
+
+        if (!product) throw new NotFoundException('Product not found');
+
+        const discount = await this.discountRepo.findOne({
+            where: { id: discountId },
+        });
+
+        if (!discount) throw new NotFoundException('Discount not found');
+
+        product.discount = discount;
+        return this.productRepo.save(product);
+    }
+
+    async removeDiscount(productId: number) {
+        const product = await this.productRepo.findOne({ where: { id: productId } });
+
+        if (!product) throw new NotFoundException('Product not found');
+
+        product.discount_id = null;
+
+        return this.productRepo.save(product);
+    }
+
+    private calculateFinalPrice(product: Product): number {
+        const price = Number(product.price);
+
+        if (!product.discount || !this.isDiscountValid(product.discount)) {
+            return price;
+        }
+
+        const value = Number(product.discount.value);
+
+        if (product.discount.type === 'PERCENTAGE') {
+            const discountAmount = (price * value) / 100;
+            return Math.max(price - discountAmount, 0);
+        }
+
+        if (product.discount.type === 'FIXED') {
+            return Math.max(price - value, 0);
+        }
+
+        return price;
+    }
+
+    private isDiscountValid(discount: Discount): boolean {
+        const now = new Date();
+
+        if (!discount.is_active) return false;
+        if (discount.start_date && discount.start_date > now) return false;
+        if (discount.end_date && discount.end_date < now) return false;
+
+        return true;
     }
 }

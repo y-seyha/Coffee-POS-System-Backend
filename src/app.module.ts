@@ -13,6 +13,7 @@ import { ProductModule } from './product/product.module';
 import { VariantManagementModule } from './variant-management/variant-management.module';
 import { CartModule } from './cart/cart.module';
 import { RoleModule } from './role/role.module';
+import { UsersModule } from './users/users.module';
 
 @Module({
   imports: [
@@ -58,7 +59,8 @@ import { RoleModule } from './role/role.module';
     ProductModule,
     VariantManagementModule,
     CartModule,
-    RoleModule
+    RoleModule,
+    UsersModule
 
   ],
   controllers: [],

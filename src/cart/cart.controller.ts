@@ -66,6 +66,36 @@ export class CartController {
         return this.cartService.updateQuantity(user.id, id, dto);
     }
 
+    //increase qty
+    @Patch('items/:id/increase')
+    @ApiOperation({ summary: 'Increase cart item quantity' })
+    increaseQuantity(
+        @CurrentUser() user: any,
+
+        @Param('id', ParseIntPipe)
+        id: number,
+    ) {
+        return this.cartService.increaseQuantity(
+            user.id,
+            id,
+        );
+    }
+
+    //decrease qty
+    @Patch('items/:id/decrease')
+    @ApiOperation({ summary: 'Decrease cart item quantity' })
+    decreaseQuantity(
+        @CurrentUser() user: any,
+
+        @Param('id', ParseIntPipe)
+        id: number,
+    ) {
+        return this.cartService.decreaseQuantity(
+            user.id,
+            id,
+        );
+    }
+
     //tested
     @Delete('items/:id')
     @ApiOperation({ summary: 'Remove item from cart' })

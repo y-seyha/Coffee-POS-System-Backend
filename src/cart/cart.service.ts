@@ -64,7 +64,11 @@ export class CartService {
         return cart;
     }
 
-    async updateQuantity(userId: number, itemId: number, dto: UpdateQuantityDto) {
+    async updateQuantity(
+        userId: number,
+        itemId: number,
+        dto: UpdateQuantityDto,
+    ) {
         this.logger.log(
             `Update quantity: userId=${userId}, itemId=${itemId}, qty=${dto.quantity}`,
         );
@@ -76,7 +80,16 @@ export class CartService {
                     staff: { id: userId },
                 },
             },
-            relations: ['cart', 'cart.staff'],
+            relations: [
+                'cart',
+                'cart.staff',
+
+                'product',
+                'product.discount',
+
+                'variants',
+                'variants.variant_option',
+            ],
         });
 
         if (!item) {
@@ -84,12 +97,42 @@ export class CartService {
             throw new NotFoundException('Item not found');
         }
 
-        item.quantity = dto.quantity;
-        item.total_price = (
-            Number(item.unit_price) * dto.quantity
-        ).toString();
+        // prevent invalid quantity
+        if (dto.quantity < 0) {
+            throw new BadRequestException(
+                'Quantity cannot be negative',
+            );
+        }
 
-        return this.cartItemRepo.save(item);
+        // auto remove if quantity = 0
+        if (dto.quantity === 0) {
+            await this.cartItemRepo.remove(item);
+
+            return {
+                message: 'Item removed from cart',
+            };
+        }
+
+        //recalculate
+        const breakdown = this.buildPriceBreakdown({
+            ...item,
+            quantity: dto.quantity,
+        } as CartItem);
+
+        item.quantity = dto.quantity;
+
+        item.unit_price =
+            breakdown.unit_price.toString();
+
+        item.total_price =
+            breakdown.price_before_discount.toString();
+
+        const updated = await this.cartItemRepo.save(item);
+
+        return {
+            message: 'Quantity updated successfully',
+            data: updated,
+        };
     }
 
     async addItem(staffId: number, dto: AddItemDto) {
@@ -458,6 +501,83 @@ export class CartService {
                 },
             };
         });
+    }
+
+    async increaseQuantity(userId: number, itemId: number) {
+        const item = await this.cartItemRepo.findOne({
+            where: {
+                id: itemId,
+                cart: {
+                    staff: { id: userId },
+                },
+            },
+            relations: [
+                'product',
+                'product.discount',
+
+                'variants',
+                'variants.variant_option',
+            ],
+        });
+
+        if (!item) {
+            throw new NotFoundException('Item not found');
+        }
+
+        item.quantity += 1;
+
+        const breakdown = this.buildPriceBreakdown(item);
+
+        item.unit_price =
+            breakdown.unit_price.toString();
+
+        item.total_price =
+            breakdown.price_before_discount.toString();
+
+        return this.cartItemRepo.save(item);
+    }
+
+    async decreaseQuantity(userId: number, itemId: number) {
+        const item = await this.cartItemRepo.findOne({
+            where: {
+                id: itemId,
+                cart: {
+                    staff: { id: userId },
+                },
+            },
+            relations: [
+                'product',
+                'product.discount',
+
+                'variants',
+                'variants.variant_option',
+            ],
+        });
+
+        if (!item) {
+            throw new NotFoundException('Item not found');
+        }
+
+        // remove automatically if qty becomes 0
+        if (item.quantity <= 1) {
+            await this.cartItemRepo.remove(item);
+
+            return {
+                message: 'Item removed from cart',
+            };
+        }
+
+        item.quantity -= 1;
+
+        const breakdown = this.buildPriceBreakdown(item);
+
+        item.unit_price =
+            breakdown.unit_price.toString();
+
+        item.total_price =
+            breakdown.price_before_discount.toString();
+
+        return this.cartItemRepo.save(item);
     }
 
     private buildVariantKey(

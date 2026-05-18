@@ -15,6 +15,7 @@ import { CartModule } from './cart/cart.module';
 import { RoleModule } from './role/role.module';
 import { UsersModule } from './users/users.module';
 import { DiscountsModule } from './discounts/discounts.module';
+import { OrdersModule } from './orders/orders.module';
 
 @Module({
   imports: [
@@ -62,7 +63,8 @@ import { DiscountsModule } from './discounts/discounts.module';
     CartModule,
     RoleModule,
     UsersModule,
-    DiscountsModule
+    DiscountsModule,
+    OrdersModule
 
   ],
   controllers: [],

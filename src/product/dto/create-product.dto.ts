@@ -55,7 +55,7 @@ export class CreateProductDto {
 
     @ApiProperty({
         example: 'Iced Latte',
-        description: 'Product name shown in POS and menu',
+        description: 'product name shown in POS and menu',
     })
     @IsString({ message: 'name must be a string' })
     @MinLength(2, { message: 'name must be at least 2 characters' })

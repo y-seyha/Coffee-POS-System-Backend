@@ -64,7 +64,7 @@ export class GetProductsQueryDto {
 
     @ApiPropertyOptional({
         example: 1,
-        description: 'Filter products by category ID',
+        description: 'Filter products by categories ID',
         minimum: 1,
     })
     @IsOptional()

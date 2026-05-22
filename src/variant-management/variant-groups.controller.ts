@@ -24,7 +24,7 @@ import {Roles} from "../auth/decorator/roles.decorator";
 
 
 @UseGuards(JwtAuthGuard, RoleGuard)
-@Roles('admin')
+@Roles('ADMIN')
 @ApiTags('Admin Variant Groups')
 @Controller('admin/variant-groups')
 export class VariantGroupsController {

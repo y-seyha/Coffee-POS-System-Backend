@@ -18,6 +18,7 @@ import {AttachProductVariantGroupsDto} from "./dto/attach_variant_group.dto";
 import { File } from '../common/entities/file_upload.entity';
 import {ClientGetProductsQueryDto} from "./dto/client_get_product.dto";
 import {Discount} from "../common/entities/discount.entity";
+import {AttachSingleVariantGroupDto} from "./dto/attach_single_variant_group.dto";
 
 @Injectable()
 export class ProductService {
@@ -91,7 +92,7 @@ export class ProductService {
             });
 
             if (!product) {
-                throw new NotFoundException('Product not found');
+                throw new NotFoundException('product not found');
             }
 
             return product;
@@ -194,15 +195,56 @@ export class ProductService {
         }
     }
 
-    async update(id: number, dto: UpdateProductDto) {
+    // async update(id: number, dto: UpdateProductDto) {
+    //     try {
+    //         const product = await this.productRepo.findOne({ where: { id } });
+    //
+    //         if (!product) {
+    //             throw new NotFoundException('product not found');
+    //         }
+    //
+    //         await this.productRepo.update(id, {
+    //             category_id: dto.category_id,
+    //             name: dto.name,
+    //             sku: dto.sku,
+    //             price: dto.price,
+    //             description: dto.description,
+    //         });
+    //
+    //         this.logger.log(`product updated id=${id}`);
+    //
+    //         return this.findOne(id);
+    //     } catch (error) {
+    //         this.logger.error(`Update failed id=${id}`, error.stack);
+    //         throw error;
+    //     }
+    // }
+
+    async update(
+        id: number,
+        dto: UpdateProductDto,
+        files: Express.Multer.File[],
+        userId: number,
+    ) {
+        const queryRunner =
+            this.productRepo.manager.connection.createQueryRunner();
+
+        this.logger.log(`Updating product id=${id}`);
+
+        await queryRunner.connect();
+        await queryRunner.startTransaction();
+
         try {
-            const product = await this.productRepo.findOne({ where: { id } });
+            const product = await queryRunner.manager.findOne(Product, {
+                where: { id },
+            });
 
             if (!product) {
-                throw new NotFoundException('Product not found');
+                throw new NotFoundException('product not found');
             }
 
-            await this.productRepo.update(id, {
+            // update product fields
+            await queryRunner.manager.update(Product, id, {
                 category_id: dto.category_id,
                 name: dto.name,
                 sku: dto.sku,
@@ -210,22 +252,56 @@ export class ProductService {
                 description: dto.description,
             });
 
-            this.logger.log(`Product updated id=${id}`);
+            const updatedProduct = await queryRunner.manager.findOne(Product, {
+                where: { id },
+            });
+
+            // handle new files (optional append)
+            if (files?.length) {
+                this.logger.log(
+                    `Uploading ${files.length} new file(s) for product id=${id}`,
+                );
+
+                const fileRepo =
+                    queryRunner.manager.getRepository(File);
+
+                for (const file of files) {
+                    const cloud =
+                        await this.fileUploadService.uploadToCloud(file);
+
+                    const fileEntity = fileRepo.create({
+                        originalName: file.originalname,
+                        mimeType: file.mimetype,
+                        size: file.size,
+                        url: cloud.secure_url,
+                        publicId: cloud.public_id,
+                        uploader: { id: userId } as any,
+                        product: { id } as any,
+                    });
+
+                    await fileRepo.save(fileEntity);
+                }
+            }
+
+            await queryRunner.commitTransaction();
 
             return this.findOne(id);
+
         } catch (error) {
+            await queryRunner.rollbackTransaction();
             this.logger.error(`Update failed id=${id}`, error.stack);
             throw error;
+        } finally {
+            await queryRunner.release();
         }
     }
-
 
     async remove(id: number) {
         try {
             const product = await this.productRepo.findOne({ where: { id } });
 
             if (!product) {
-                throw new NotFoundException('Product not found');
+                throw new NotFoundException('product not found');
             }
 
             await this.productRepo.delete(id);
@@ -233,7 +309,7 @@ export class ProductService {
             this.logger.log(`Product deleted id=${id}`);
 
             return {
-                message: 'Product deleted successfully',
+                message: 'product deleted successfully',
             };
         } catch (error) {
             this.logger.error(`Delete failed id=${id}`, error.stack);
@@ -268,7 +344,7 @@ export class ProductService {
                 this.logger.warn(
                     `Product not found id=${productId}`,
                 );
-                throw new NotFoundException('Product not found');
+                throw new NotFoundException('product not found');
             }
 
             // remove duplicates from request
@@ -323,6 +399,41 @@ export class ProductService {
         }
     }
 
+    async attachSingleVariantGroup(productId: number, dto: AttachSingleVariantGroupDto) {
+        const product = await this.productRepo.findOne({
+            where: { id: productId },
+        });
+
+        if (!product) {
+            throw new NotFoundException('product not found');
+        }
+
+        // check if already exists
+        const existing = await this.productVariantGroupRepo.findOne({
+            where: {
+                product_id: productId,
+                variant_group_id: dto.variant_group_id,
+            },
+        });
+
+        if (existing) {
+            throw new BadRequestException('Variant group already attached');
+        }
+
+        const record = this.productVariantGroupRepo.create({
+            product_id: productId,
+            variant_group_id: dto.variant_group_id,
+            is_required: dto.is_required ?? true,
+            sort_order: dto.sort_order ?? 0,
+        });
+
+        await this.productVariantGroupRepo.save(record);
+
+        return {
+            message: 'Variant group attached',
+        };
+    }
+
     async clientFindAll(query: ClientGetProductsQueryDto) {
         try {
             const {
@@ -338,6 +449,9 @@ export class ProductService {
                 .leftJoinAndSelect('product.images', 'images')
                 .leftJoinAndSelect('product.category', 'category')
                 .leftJoinAndSelect('product.discount', 'discount')
+                .leftJoinAndSelect('product.variant_groups', 'variant_groups')
+                .leftJoinAndSelect('variant_groups.variant_group', 'variant_group')
+                .leftJoinAndSelect('variant_group.options', 'options')
                 .where('product.is_active = true')
                 .andWhere('product.is_available = true')
                 .skip((page - 1) * limit)
@@ -351,7 +465,7 @@ export class ProductService {
                 );
             }
 
-            //  filter by category
+            //  filter by categories
             if (categoryId) {
                 qb.andWhere('product.category_id = :categoryId', {
                     categoryId,
@@ -403,7 +517,7 @@ export class ProductService {
             where: { id: productId },
         });
 
-        if (!product) throw new NotFoundException('Product not found');
+        if (!product) throw new NotFoundException('product not found');
 
         const discount = await this.discountRepo.findOne({
             where: { id: discountId },
@@ -418,11 +532,63 @@ export class ProductService {
     async removeDiscount(productId: number) {
         const product = await this.productRepo.findOne({ where: { id: productId } });
 
-        if (!product) throw new NotFoundException('Product not found');
+        if (!product) throw new NotFoundException('product not found');
 
         product.discount_id = null;
 
         return this.productRepo.save(product);
+    }
+
+    async findBestSellers(limit = 10) {
+        const qb = this.productRepo
+            .createQueryBuilder('product')
+            .leftJoin('order_items', 'oi', 'oi.product_id = product.id')
+            .leftJoinAndSelect('product.images', 'images')
+            .leftJoinAndSelect('product.category', 'category')
+            .leftJoinAndSelect('product.discount', 'discount')
+            .where('product.is_active = true')
+            .groupBy('product.id')
+            .addGroupBy('images.id')
+            .addGroupBy('category.id')
+            .addGroupBy('discount.id')
+            .addSelect('COALESCE(SUM(oi.quantity), 0)', 'sold')
+            .orderBy('sold', 'DESC')
+            .take(limit);
+
+        const items = await qb.getRawAndEntities();
+
+        return {
+            data: items.entities.map((p, i) => ({
+                ...p,
+                sold: Number(items.raw[i]?.sold ?? 0),
+                final_price: this.calculateFinalPrice(p),
+            })),
+        };
+    }
+
+
+    async setAvailability(productId: number, is_available: boolean) {
+        const product = await this.productRepo.findOne({
+            where: { id: productId },
+        });
+
+        if (!product) {
+            throw new NotFoundException('product not found');
+        }
+
+        product.is_available = is_available;
+
+        await this.productRepo.save(product);
+
+        this.logger.log(
+            `Product availability updated id=${productId} => ${is_available}`,
+        );
+
+        return {
+            message: 'Product availability updated',
+            id: productId,
+            is_available,
+        };
     }
 
     private calculateFinalPrice(product: Product): number {

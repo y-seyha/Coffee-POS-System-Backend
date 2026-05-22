@@ -31,12 +31,12 @@ import { Roles } from '../auth/decorator/roles.decorator';
 @Controller('categories')
 @UseGuards(JwtAuthGuard, RoleGuard)
 @UseGuards(JwtAuthGuard)
-@Roles('admin')
+@Roles('ADMIN')
 export class CategoryController {
     constructor(private readonly categoryService: CategoryService) {}
 
     @Post()
-    @ApiOperation({ summary: 'Create category (Admin only)' })
+    @ApiOperation({ summary: 'Create categories (Admin only)' })
     @ApiResponse({ status: 201, description: 'Category created successfully' })
     create(@Body() dto: CreateCategoryDto) {
         return this.categoryService.create(dto);
@@ -50,7 +50,7 @@ export class CategoryController {
     }
 
     @Get(':id')
-    @ApiOperation({ summary: 'Get category by ID' })
+    @ApiOperation({ summary: 'Get categories by ID' })
     @ApiParam({ name: 'id', type: Number })
     @ApiResponse({ status: 200, description: 'Category detail' })
     findOne(@Param('id', ParseIntPipe) id: number) {
@@ -58,7 +58,7 @@ export class CategoryController {
     }
 
     @Patch(':id')
-    @ApiOperation({ summary: 'Update category (Admin only)' })
+    @ApiOperation({ summary: 'Update categories (Admin only)' })
     @ApiParam({ name: 'id', type: Number })
     @ApiResponse({ status: 200, description: 'Category updated' })
     update(
@@ -69,7 +69,7 @@ export class CategoryController {
     }
 
     @Delete(':id')
-    @ApiOperation({ summary: 'Delete category (Admin only)' })
+    @ApiOperation({ summary: 'Delete categories (Admin only)' })
     @ApiParam({ name: 'id', type: Number })
     @ApiResponse({ status: 200, description: 'Category deleted' })
     remove(@Param('id', ParseIntPipe) id: number) {

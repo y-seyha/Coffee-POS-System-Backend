@@ -18,7 +18,7 @@ export class CategoryService {
             const category = this.categoryRepo.create(dto);
             return await this.categoryRepo.save(category);
         } catch (error) {
-            throw new InternalServerErrorException('Failed to create category');
+            throw new InternalServerErrorException('Failed to create categories');
         }
     }
 
@@ -49,7 +49,7 @@ export class CategoryService {
             return category;
         } catch (error) {
             if (error instanceof NotFoundException) throw error;
-            throw new InternalServerErrorException('Failed to fetch category');
+            throw new InternalServerErrorException('Failed to fetch categories');
         }
     }
 
@@ -61,7 +61,7 @@ export class CategoryService {
 
             return await this.categoryRepo.save(category);
         } catch (error) {
-            throw new InternalServerErrorException('Failed to update category');
+            throw new InternalServerErrorException('Failed to update categories');
         }
     }
 
@@ -77,7 +77,7 @@ export class CategoryService {
                 deletedCategoryId: id,
             };
         } catch (error) {
-            throw new InternalServerErrorException('Failed to delete category');
+            throw new InternalServerErrorException('Failed to delete categories');
         }
     }
 }

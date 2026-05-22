@@ -20,7 +20,7 @@ export class FileResponseDto {
     publicId: string;
 
     @ApiProperty({
-        example: 'Product image for iced latte',
+        example: 'product image for iced latte',
         required: false,
     })
     description?: string;

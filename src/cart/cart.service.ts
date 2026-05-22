@@ -144,7 +144,7 @@ export class CartService {
             id: dto.product_id,
         });
 
-        if (!product) throw new NotFoundException('Product not found');
+        if (!product) throw new NotFoundException('product not found');
 
         const variantKey = this.buildVariantKey(dto.variants || []);
 
@@ -299,6 +299,7 @@ export class CartService {
             where: { cart: { id: cart.id } },
             relations: [
                 'product',
+                'product.images',
                 'product.discount',
                 'variants',
                 'variants.variant_group',
@@ -486,12 +487,19 @@ export class CartService {
                     order_number: savedOrder.order_number,
                     status: savedOrder.order_status,
 
-                    subtotal,
-                    tax,
-                    discount,
-                    total: grandTotal,
-                },
+                    items: cart.items.map(i => ({
+                        id: i.id,
+                        product: { name: i.name },
+                        quantity: i.quantity,
+                    })),
 
+                    subtotal,
+                    discount_total: discount,
+                    tax,
+                    grand_total: grandTotal,
+
+                    payment_method: dto.payment_method,
+                },
                 payment: {
                     id: savedPayment.id,
                     payment_number: savedPayment.payment_number,
@@ -646,6 +654,8 @@ export class CartService {
                     id: item.product?.id,
                     name: item.product?.name,
                     base_price: Number(item.product?.price),
+
+                    image: item.product?.images?.[0]?.url || null,
                 },
 
                 unit_price: breakdown.unit_price,

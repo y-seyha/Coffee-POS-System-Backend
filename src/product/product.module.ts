@@ -6,13 +6,14 @@ import {Product} from "../common/entities/product.entity";
 import {ProductVariantGroup} from "../common/entities/product_variant_groups.entity";
 import {FileUploadModule} from "../file-upload/file-upload.module";
 import {Discount} from "../common/entities/discount.entity";
+import {Category} from "../common/entities/category.entity";
 
 @Module({
   imports: [
     TypeOrmModule.forFeature([
       Product,
       ProductVariantGroup,
-        Discount
+        Discount, Category
     ]),
     FileUploadModule
   ],

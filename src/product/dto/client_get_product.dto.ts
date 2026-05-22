@@ -49,7 +49,7 @@ export class ClientGetProductsQueryDto {
 
     @ApiPropertyOptional({
         example: 2,
-        description: 'Filter by category ID',
+        description: 'Filter by categories ID',
     })
     @IsOptional()
     @Type(() => Number)

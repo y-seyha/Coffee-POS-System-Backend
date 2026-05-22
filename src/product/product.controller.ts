@@ -30,6 +30,7 @@ import { Roles } from '../auth/decorator/roles.decorator';
 import {RoleGuard} from "../auth/guard/role.guard";
 import {AttachProductVariantGroupsDto} from "./dto/attach_variant_group.dto";
 import {ClientGetProductsQueryDto} from "./dto/client_get_product.dto";
+import {AttachSingleVariantGroupDto} from "./dto/attach_single_variant_group.dto";
 
 @ApiTags('Products')
 @Controller('products')
@@ -48,8 +49,19 @@ export class ProductController {
         return this.productService.clientFindAll(query);
     }
 
+    //best-sellers
+    @Get('best-sellers')
+    @ApiOperation({
+        summary: 'Get best selling products',
+    })
+    findBestSellers(@Query('limit') limit?: number) {
+        return this.productService.findBestSellers(Number(limit || 10));
+    }
+
     //assign discount to products
     @Post(':id/discount')
+    @UseGuards(JwtAuthGuard, RoleGuard)
+    @Roles('ADMIN')
     assignDiscount(
         @Param('id', ParseIntPipe) id: number,
         @Body('discountId') discountId: number,
@@ -57,7 +69,23 @@ export class ProductController {
         return this.productService.assignDiscount(id, discountId);
     }
 
+    @Patch(':id/availability')
+    @UseGuards(JwtAuthGuard, RoleGuard)
+    @Roles('ADMIN')
+    @ApiBearerAuth('access-token')
+    @ApiOperation({
+        summary: 'Toggle product availability (in stock / out of stock)',
+    })
+    setAvailability(
+        @Param('id', ParseIntPipe) id: number,
+        @Body('is_available') is_available: boolean,
+    ) {
+        return this.productService.setAvailability(id, is_available);
+    }
+
     @Delete(':id/discount')
+    @UseGuards(JwtAuthGuard, RoleGuard)
+    @Roles('ADMIN')
     removeDiscount(@Param('id', ParseIntPipe) id: number) {
         return this.productService.removeDiscount(id);
     }
@@ -69,19 +97,20 @@ export class ProductController {
     @ApiOperation({
         summary: 'Get all products',
         description:
-            'Retrieve paginated product list with filters (search, category, sorting)',
+            'Retrieve paginated product list with filters (search, categories, sorting)',
     })
     findAll(@Query() query: GetProductsQueryDto) {
         return this.productService.findAll(query);
     }
 
-    @Get('category/:categoryId')
+
+    @Get('categories/:categoryId')
     @UseGuards(JwtAuthGuard, RoleGuard)
     @Roles('ADMIN')
     @ApiBearerAuth('access-token')
     @ApiOperation({
-        summary: 'Get products by category',
-        description: 'Fetch all products belonging to a specific category',
+        summary: 'Get products by categories',
+        description: 'Fetch all products belonging to a specific categories',
     })
     findByCategory(
         @Param('categoryId', ParseIntPipe) categoryId: number,
@@ -97,7 +126,7 @@ export class ProductController {
     @ApiOperation({
         summary: 'Get product by ID',
         description:
-            'Fetch single product with category, images, and variant groups',
+            'Fetch single product with categories, images, and variant groups',
     })
     findOne(@Param('id', ParseIntPipe) id: number) {
         return this.productService.findOne(id);
@@ -127,16 +156,21 @@ export class ProductController {
     @UseGuards(JwtAuthGuard, RoleGuard)
     @Roles('ADMIN')
     @ApiBearerAuth('access-token')
-    @ApiOperation({
-        summary: 'Update product (Admin only)',
-        description:
-            'Update product fields such as name, price, SKU, category',
-    })
+    @UseInterceptors(FilesInterceptor('files'))
     update(
         @Param('id', ParseIntPipe) id: number,
+        @UploadedFiles() files: Express.Multer.File[],
         @Body() dto: UpdateProductDto,
+        @Req() req: Request,
     ) {
-        return this.productService.update(id, dto);
+        const userId = (req as any).user?.id;
+
+        return this.productService.update(
+            id,
+            dto,
+            files,
+            userId,
+        );
     }
 
     @Post(':id/variant-groups')
@@ -154,13 +188,35 @@ export class ProductController {
     })
     @ApiResponse({
         status: 404,
-        description: 'Product not found',
+        description: 'product not found',
     })
     attachVariantGroups(
         @Param('id', ParseIntPipe) id: number,
         @Body() dto: AttachProductVariantGroupsDto,
     ) {
         return this.productService.attachVariantGroups(id, dto);
+    }
+
+    @Post(':id/variant-group')
+    @UseGuards(JwtAuthGuard, RoleGuard)
+    @Roles('ADMIN')
+    @ApiBearerAuth('access-token')
+    @ApiOperation({
+        summary: 'Attach single variant group to product',
+    })
+    @ApiResponse({
+        status: 200,
+        description: 'Variant group attached successfully',
+    })
+    @ApiResponse({
+        status: 404,
+        description: 'Product or variant group not found',
+    })
+    attachSingleVariantGroup(
+        @Param('id', ParseIntPipe) id: number,
+        @Body() dto: AttachSingleVariantGroupDto,
+    ) {
+        return this.productService.attachSingleVariantGroup(id, dto);
     }
 
     @Delete(':id')

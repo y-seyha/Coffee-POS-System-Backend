@@ -23,7 +23,7 @@ import {RoleGuard} from "../auth/guard/role.guard";
 import {Roles} from "../auth/decorator/roles.decorator";
 
 @UseGuards(JwtAuthGuard, RoleGuard)
-@Roles('admin')
+@Roles('ADMIN')
 @ApiTags('Admin Variant Options')
 @Controller('admin/variant-options')
 export class VariantOptionsController {

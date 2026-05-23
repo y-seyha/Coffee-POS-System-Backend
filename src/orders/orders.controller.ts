@@ -32,6 +32,7 @@ import { CompleteOrderDto } from './dto/complete-order.dto';
 
 import { Roles } from '../auth/decorator/roles.decorator';
 import { CurrentUser } from '../auth/decorator/current_user.decorator';
+import {GetOrderListDto} from "./dto/get-order-list.dto";
 
 @ApiTags('Orders')
 @ApiBearerAuth()
@@ -94,6 +95,14 @@ export class OrdersController {
     })
     getDailySales(@Query('date') date: string) {
         return this.orderService.getDailySales(date);
+    }
+
+    @Get('list')
+    @ApiOperation({
+        summary: 'Get order list with filters, pagination, and search',
+    })
+    getOrderList(@Query() query: GetOrderListDto) {
+        return this.orderService.getOrderList(query);
     }
 
     @Get('stats/monthly-revenue')

@@ -17,6 +17,7 @@ import { ConfirmOrderDto } from './dto/confirm-order.dto';
 import { CompleteOrderDto } from './dto/complete-order.dto';
 import { CancelOrderDto } from './dto/cancel-order.dto';
 import {Payment, PaymentStatus} from "../common/entities/payment.entity";
+import {GetOrderListDto} from "./dto/get-order-list.dto";
 
 @Injectable()
 export class OrdersService {
@@ -33,6 +34,73 @@ export class OrdersService {
         @InjectRepository(Payment)
         private readonly paymentRepo: Repository<Payment>,
     ) {}
+
+    async getOrderList(query: GetOrderListDto) {
+        this.logger.log('Fetching order list (advanced)');
+
+        try {
+            const page = Number(query.page ?? 1);
+            const limit = Number(query.limit ?? 10);
+            const skip = (page - 1) * limit;
+
+            const qb = this.orderRepo
+                .createQueryBuilder('order')
+                .leftJoinAndSelect('order.items', 'items')
+                .leftJoinAndSelect('order.payments', 'payments');
+
+            if (query.search?.trim()) {
+                qb.andWhere(
+                    `(CAST(order.id AS TEXT) ILIKE :search
+                  OR order.order_number ILIKE :search)`,
+                    { search: `%${query.search.trim()}%` },
+                );
+            }
+
+            if (query.status?.trim()) {
+                qb.andWhere('order.order_status = :status', {
+                    status: query.status,
+                });
+            }
+
+
+            if (query.type?.trim()) {
+                qb.andWhere('order.order_type = :type', {
+                    type: query.type,
+                });
+            }
+
+            if (query.from && query.to) {
+                qb.andWhere('order.created_at BETWEEN :from AND :to', {
+                    from: query.from,
+                    to: query.to,
+                });
+            }
+
+            qb.orderBy(
+                'order.created_at',
+                query.sort === 'ASC' ? 'ASC' : 'DESC',
+            );
+
+            const [data, total] = await qb
+                .skip(skip)
+                .take(limit)
+                .getManyAndCount();
+
+            return {
+                data,
+                total,
+                page,
+                limit,
+                total_pages: Math.ceil(total / limit),
+            };
+        } catch (error) {
+            this.logger.error('getOrderList failed', error.stack);
+
+            throw new InternalServerErrorException(
+                error.message || 'Failed to fetch orders',
+            );
+        }
+    }
 
 
     private async addHistory(

@@ -136,6 +136,9 @@ export class AuthService {
             throw new ForbiddenException('Please verify your email first');
         }
 
+        user.last_login_at = new Date();
+        await this.userRepo.save(user);
+
         const tokens = this.generateToken(user);
 
         return {

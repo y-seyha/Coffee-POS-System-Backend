@@ -10,6 +10,12 @@ import {
 import { BaseEntity } from './base.entity';
 import {User} from "./user.entity";
 
+export enum Position {
+    CASHIER = 'Cashier',
+    BARISTA = 'Barista',
+    MANAGER = 'Manager',
+}
+
 @Entity('staff_profiles')
 export class StaffProfile extends BaseEntity {
     @PrimaryGeneratedColumn()
@@ -18,8 +24,8 @@ export class StaffProfile extends BaseEntity {
     @Column({ unique: true })
     employee_code: string;
 
-    @Column()
-    position: string;
+    @Column({ type: 'enum', enum: Position, nullable: true })
+    position: Position;
 
     @Column({ type: 'date' })
     hire_date: Date;

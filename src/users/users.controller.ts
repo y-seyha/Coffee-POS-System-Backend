@@ -6,7 +6,7 @@ import {
     Param,
     ParseIntPipe,
     Patch,
-    Delete,
+    Delete, Query,
 } from '@nestjs/common';
 
 import { ApiTags, ApiOperation } from '@nestjs/swagger';
@@ -20,6 +20,7 @@ import { JwtAuthGuard } from '../auth/guard/jwt-auth.guard';
 import { RoleGuard } from '../auth/guard/role.guard';
 import { UseGuards } from '@nestjs/common';
 import {ResetPasswordDto} from "./dto/reset-password.dto";
+import {FilterUsersDto} from "./dto/filter-users.dto";
 
 @ApiTags('Users')
 @Controller('users')
@@ -36,8 +37,8 @@ export class UsersController {
 
     @Get()
     @Roles('ADMIN')
-    findAll() {
-        return this.userService.findAll();
+    findAll(@Query() query: FilterUsersDto) {
+        return this.userService.findAll(query);
     }
 
     @Get(':id')

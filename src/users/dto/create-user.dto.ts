@@ -17,6 +17,7 @@ import {
 } from '@nestjs/swagger';
 
 import { Type } from 'class-transformer';
+import {Position} from "../../common/entities/staff_profile.entity";
 
 export class CreateUserDto {
 
@@ -77,7 +78,7 @@ export class CreateUserDto {
     })
     @IsOptional()
     @IsString()
-    position?: string;
+    position: Position;
 
     @ApiPropertyOptional({
         example: '2026-01-01',

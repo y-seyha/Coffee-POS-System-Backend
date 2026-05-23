@@ -11,10 +11,11 @@ import * as bcrypt from 'bcrypt';
 
 import { User } from '../common/entities/user.entity';
 import { Role } from '../common/entities/roles.entity';
-import { StaffProfile } from '../common/entities/staff_profile.entity';
+import {Position, StaffProfile} from '../common/entities/staff_profile.entity';
 
 import { CreateUserDto } from './dto/create-user.dto';
 import { UpdateUserDto } from './dto/update-user.dto';
+import {FilterUsersDto} from "./dto/filter-users.dto";
 
 @Injectable()
 export class UsersService {
@@ -90,12 +91,113 @@ export class UsersService {
         }
     }
 
-    async findAll() {
+    // async findAll() {
+    //     try {
+    //         return await this.userRepo.find({
+    //             relations: ['role', 'staffProfile'],
+    //             order: { id: 'DESC' },
+    //         });
+    //     } catch (error) {
+    //         this.logger.error(`FindAll failed: ${error.message}`);
+    //         throw error;
+    //     }
+    // }
+
+    async findAll(query: FilterUsersDto) {
         try {
-            return await this.userRepo.find({
-                relations: ['role', 'staffProfile'],
-                order: { id: 'DESC' },
-            });
+            const {
+                search,
+                role,
+                is_active,
+                sortBy = 'created_at',
+                order = 'DESC',
+                page = '1',
+                limit = '10',
+            } = query;
+
+            const qb = this.userRepo
+                .createQueryBuilder('user')
+                .leftJoinAndSelect('user.role', 'role')
+                .leftJoinAndSelect('user.staffProfile', 'staffProfile');
+
+            // SEARCH
+            if (search) {
+                qb.andWhere(
+                    `
+                (
+                    LOWER(user.name) LIKE LOWER(:search)
+                    OR LOWER(user.email) LIKE LOWER(:search)
+                    OR LOWER(user.phone) LIKE LOWER(:search)
+                    OR LOWER(role.name) LIKE LOWER(:search)
+                    OR LOWER(staffProfile.employee_code) LIKE LOWER(:search)
+                )
+                `,
+                    {
+                        search: `%${search}%`,
+                    },
+                );
+            }
+
+            // ROLE FILTER
+            if (role) {
+                qb.andWhere('role.name = :role', {
+                    role,
+                });
+            }
+
+            // STATUS FILTER
+            if (is_active !== undefined) {
+                qb.andWhere('user.is_active = :is_active', {
+                    is_active: is_active === 'true',
+                });
+            }
+
+            /**
+             * SORTABLE FIELD MAP
+             */
+            const sortableFields: Record<string, string> = {
+                id: 'user.id',
+                name: 'user.name',
+                email: 'user.email',
+                phone: 'user.phone',
+                created_at: 'user.created_at',
+                updated_at: 'user.updated_at',
+                is_active: 'user.is_active',
+                last_login_at: 'user.last_login_at',
+
+                role: 'role.name',
+
+                employee_code: 'staffProfile.employee_code',
+                position: 'staffProfile.position',
+                salary: 'staffProfile.salary',
+                hire_date: 'staffProfile.hire_date',
+            };
+
+            const sortField =
+                sortableFields[sortBy] || sortableFields.created_at;
+
+            qb.orderBy(sortField, order);
+
+            // PAGINATION
+            const take = Number(limit);
+            const skip = (Number(page) - 1) * take;
+
+            qb.skip(skip).take(take);
+
+            const [users, total] = await qb.getManyAndCount();
+
+            return {
+                data: users,
+                meta: {
+                    total,
+                    page: Number(page),
+                    limit: take,
+                    totalPages: Math.ceil(total / take),
+
+                    sortBy,
+                    order,
+                },
+            };
         } catch (error) {
             this.logger.error(`FindAll failed: ${error.message}`);
             throw error;
@@ -145,17 +247,6 @@ export class UsersService {
                     }
 
                     user.email = dto.email;
-                }
-
-                // role update
-                if (dto.role_id) {
-                    const role = await roleRepo.findOne({
-                        where: { id: dto.role_id },
-                    });
-
-                    if (!role) throw new NotFoundException('Role not found');
-
-                    user.role = role;
                 }
 
                 if (dto.name !== undefined) user.name = dto.name;
@@ -243,7 +334,6 @@ export class UsersService {
 
             // SYNC POSITION WITH ROLE NAME
             if (user.staffProfile) {
-                user.staffProfile.position = role.name;
                 await this.staffRepo.save(user.staffProfile);
             }
 
@@ -277,18 +367,14 @@ export class UsersService {
         user: User,
         dto: CreateUserDto,
     ) {
-        if (!dto.employee_code || !dto.position) {
-            throw new BadRequestException(
-                'Staff info required for non-admin users',
-            );
-        }
+        const employee_code = await this.generateEmployeeCode(staffRepo);
 
         const staff = staffRepo.create({
-            employee_code: dto.employee_code,
-            position: dto.position,
-            hire_date: dto.hire_date ? new Date(dto.hire_date) : undefined,
+            employee_code,
+            position: dto.position ?? Position.CASHIER,
+            hire_date: dto.hire_date ? new Date(dto.hire_date) : new Date(),
             salary: this.normalizeSalary(dto.salary),
-            address: dto.address,
+            address: dto.address ?? '',
             user: { id: user.id },
         });
 
@@ -312,8 +398,6 @@ export class UsersService {
             });
         }
 
-        if (dto.employee_code) staff.employee_code = dto.employee_code;
-        if (dto.position) staff.position = dto.position;
         if (dto.hire_date)
             staff.hire_date = new Date(dto.hire_date);
         if (dto.salary) staff.salary = dto.salary.toString();
@@ -324,5 +408,26 @@ export class UsersService {
 
     private normalizeSalary(salary?: number): string | undefined {
         return salary !== undefined ? salary.toFixed(2) : undefined;
+    }
+
+    private async generateEmployeeCode(staffRepo: Repository<StaffProfile>) {
+        const last = await staffRepo
+            .createQueryBuilder("staff")
+            .orderBy("staff.id", "DESC")
+            .getOne();
+
+        const nextId = (last?.id ?? 0) + 1;
+        return `EMP-${String(nextId).padStart(3, "0")}`;
+    }
+
+    private mapRoleToPosition(role: string): Position {
+        switch (role) {
+            case 'ADMIN':
+                return Position.MANAGER;
+            case 'STAFF':
+                return Position.CASHIER;
+            default:
+                return Position.CASHIER;
+        }
     }
 }

@@ -195,31 +195,6 @@ export class ProductService {
         }
     }
 
-    // async update(id: number, dto: UpdateProductDto) {
-    //     try {
-    //         const product = await this.productRepo.findOne({ where: { id } });
-    //
-    //         if (!product) {
-    //             throw new NotFoundException('product not found');
-    //         }
-    //
-    //         await this.productRepo.update(id, {
-    //             category_id: dto.category_id,
-    //             name: dto.name,
-    //             sku: dto.sku,
-    //             price: dto.price,
-    //             description: dto.description,
-    //         });
-    //
-    //         this.logger.log(`product updated id=${id}`);
-    //
-    //         return this.findOne(id);
-    //     } catch (error) {
-    //         this.logger.error(`Update failed id=${id}`, error.stack);
-    //         throw error;
-    //     }
-    // }
-
     async update(
         id: number,
         dto: UpdateProductDto,
@@ -438,7 +413,7 @@ export class ProductService {
         try {
             const {
                 page = 1,
-                limit = 10,
+                limit = 50,
                 search,
                 categoryId,
                 sort = 'default',
@@ -511,22 +486,48 @@ export class ProductService {
         }
     }
 
-
     async assignDiscount(productId: number, discountId: number) {
         const product = await this.productRepo.findOne({
             where: { id: productId },
+            relations: ['discount'],
         });
 
-        if (!product) throw new NotFoundException('product not found');
+        if (!product) {
+            throw new NotFoundException('Product not found');
+        }
 
         const discount = await this.discountRepo.findOne({
             where: { id: discountId },
         });
 
-        if (!discount) throw new NotFoundException('Discount not found');
+        if (!discount) {
+            throw new NotFoundException('Discount not found');
+        }
+
+        // prevent inactive/expired discounts
+        if (!this.isDiscountValid(discount)) {
+            throw new BadRequestException(
+                'Cannot assign inactive or expired discount',
+            );
+        }
+
+        //void reassigning same discount
+        if (product.discount_id === discount.id) {
+            throw new BadRequestException(
+                'Discount already assigned to product',
+            );
+        }
 
         product.discount = discount;
-        return this.productRepo.save(product);
+
+        const updated = await this.productRepo.save(product);
+
+        return {
+            message: 'Discount assigned successfully',
+            productId,
+            discountId,
+            product: updated,
+        };
     }
 
     async removeDiscount(productId: number) {

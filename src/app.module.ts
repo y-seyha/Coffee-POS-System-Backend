@@ -49,9 +49,13 @@ import { PaymentsModule } from './payment/payment.module';
         database: config.get('DATABASE_NAME'),
         entities: [__dirname + '/common/entities/*.entity{.ts,.js}'],
         synchronize: true,
-        ssl: process.env.NODE_ENV === 'production'
-            ? { rejectUnauthorized: false }
-            : false,
+        //pg
+        // ssl: process.env.NODE_ENV === 'production'
+        //     ? { rejectUnauthorized: false }
+        //     : false,
+
+        // neon
+        ssl: { rejectUnauthorized: false }
       }),
     }),
 

@@ -334,6 +334,8 @@ export class UsersService {
 
             // SYNC POSITION WITH ROLE NAME
             if (user.staffProfile) {
+                user.staffProfile.position = this.mapRoleToPosition(role.name);
+
                 await this.staffRepo.save(user.staffProfile);
             }
 
@@ -398,10 +400,17 @@ export class UsersService {
             });
         }
 
+        if (dto.position)
+            staff.position = dto.position as Position;
+
         if (dto.hire_date)
             staff.hire_date = new Date(dto.hire_date);
-        if (dto.salary) staff.salary = dto.salary.toString();
-        if (dto.address) staff.address = dto.address;
+
+        if (dto.salary)
+            staff.salary = dto.salary.toString();
+
+        if (dto.address)
+            staff.address = dto.address;
 
         await staffRepo.save(staff);
     }
@@ -424,10 +433,15 @@ export class UsersService {
         switch (role) {
             case 'ADMIN':
                 return Position.MANAGER;
-            case 'STAFF':
+
+            case 'MANAGER':
+                return Position.MANAGER;
+
+            case 'CASHIER':
                 return Position.CASHIER;
+
             default:
-                return Position.CASHIER;
+                return Position.BARISTA;
         }
     }
 }

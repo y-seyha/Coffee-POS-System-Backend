@@ -106,7 +106,6 @@ export class ProductController {
 
     @Get('categories/:categoryId')
     @UseGuards(JwtAuthGuard, RoleGuard)
-    @Roles('ADMIN')
     @ApiBearerAuth('access-token')
     @ApiOperation({
         summary: 'Get products by categories',

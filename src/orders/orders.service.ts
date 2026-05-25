@@ -405,6 +405,8 @@ export class OrdersService {
             const pendingOrders = await this.orderRepo.count({
                 where: { order_status: OrderStatus.PENDING },
             });
+            const revenueLast7Days = await this.getRevenueLastDays(7);
+            const revenueByMonth = await this.getRevenueByMonth();
 
             return {
                 summary: {
@@ -415,6 +417,8 @@ export class OrdersService {
                 sales: {
                     daily: dailySales.total,
                     monthly: monthlyRevenue.total,
+                    daily_series: revenueLast7Days,
+                    monthly_series: revenueByMonth,
                 },
                 top_products: topProducts,
                 status_stats: statusStats,
@@ -423,4 +427,36 @@ export class OrdersService {
             throw new InternalServerErrorException('Failed report generation');
         }
     }
+
+    async getRevenueLastDays(days = 7) {
+        return this.orderRepo
+            .createQueryBuilder('order')
+            .select("DATE(order.created_at)", "date")
+            .addSelect("SUM(order.grand_total)", "revenue")
+            .where("order.order_status = :status", {
+                status: OrderStatus.COMPLETED,
+            })
+            .andWhere(
+                "order.created_at >= NOW() - INTERVAL '1 day' * :days",
+                { days },
+            )
+            .groupBy("DATE(order.created_at)")
+            .orderBy("date", "ASC")
+            .getRawMany();
+    }
+
+    async getRevenueByMonth() {
+        return this.orderRepo
+            .createQueryBuilder('order')
+            .select("TO_CHAR(order.created_at, 'YYYY-MM')", "month")
+            .addSelect("SUM(order.grand_total)", "revenue")
+            .where("order.order_status = :status", {
+                status: OrderStatus.COMPLETED,
+            })
+            .groupBy("month")
+            .orderBy("month", "ASC")
+            .getRawMany();
+    }
+
+
 }

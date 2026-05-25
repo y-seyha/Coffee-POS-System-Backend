@@ -28,20 +28,22 @@ async function bootstrap() {
       })
   );
 
-    const config = new DocumentBuilder()
-        .setTitle('Coffee POS System API')
-        .setDescription('API documentation for Coffee POS System')
-        .setVersion('1.0') // API version
-        .addBearerAuth({ type: 'http', scheme: 'bearer', bearerFormat: 'JWT' })
-        .build();
+    if (process.env.NODE_ENV !== 'production') {
+        const config = new DocumentBuilder()
+            .setTitle('Coffee POS System API')
+            .setDescription('API documentation for Coffee POS System')
+            .setVersion('1.0')
+            .addBearerAuth({ type: 'http', scheme: 'bearer', bearerFormat: 'JWT' })
+            .build();
 
-    const document = SwaggerModule.createDocument(app, config);
-    SwaggerModule.setup('swagger-documents', app, document, {
-        useGlobalPrefix: false,
-        swaggerOptions: {
-            persistAuthorization: true,
-        },
-    });
+        const document = SwaggerModule.createDocument(app, config);
+        SwaggerModule.setup('swagger-documents', app, document, {
+            useGlobalPrefix: false,
+            swaggerOptions: {
+                persistAuthorization: true,
+            },
+        });
+    }
 
     //cookie middleware
     app.use(cookieParser());

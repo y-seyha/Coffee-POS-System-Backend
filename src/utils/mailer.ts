@@ -36,8 +36,8 @@ export class MailerService {
         const backendUrl = new URL(process.env.BACKEND_URL!);
 
         const verificationUrl = new URL(
-            '/api/auth/verify-email',
-            backendUrl,
+            '/verify-email',
+            process.env.FRONTEND_URL,
         );
 
         verificationUrl.searchParams.set('token', token);
@@ -71,7 +71,7 @@ export class MailerService {
             },
         );
 
-        console.log('📧 Brevo verification email response:', res.data);
+        // console.log('📧 Brevo verification email response:', res.data);
 
         return res.data;
     }

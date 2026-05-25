@@ -9,7 +9,7 @@ COPY . .
 RUN npm run build
 
 
-#Production
+# Production
 FROM node:22-alpine AS runner
 
 WORKDIR /app
@@ -21,7 +21,7 @@ RUN npm ci --omit=dev
 
 COPY --from=builder /app/dist ./dist
 
-RUN apk add --no-cache dumb-init
+RUN apk add --no-cache dumb-init wget
 
 EXPOSE 3000
 

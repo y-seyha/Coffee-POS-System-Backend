@@ -17,6 +17,7 @@ import { UsersModule } from './users/users.module';
 import { DiscountsModule } from './discounts/discounts.module';
 import { OrdersModule } from './orders/orders.module';
 import { PaymentsModule } from './payment/payment.module';
+import { HealthModule } from './health/health.module';
 
 @Module({
   imports: [
@@ -49,13 +50,13 @@ import { PaymentsModule } from './payment/payment.module';
         database: config.get('DATABASE_NAME'),
         entities: [__dirname + '/common/entities/*.entity{.ts,.js}'],
         synchronize: true,
-        //pg
-        // ssl: process.env.NODE_ENV === 'production'
-        //     ? { rejectUnauthorized: false }
-        //     : false,
+        // prod
+        ssl: process.env.NODE_ENV === 'production'
+            ? { rejectUnauthorized: false }
+            : false,
 
         // neon
-        ssl: { rejectUnauthorized: false }
+        // ssl: { rejectUnauthorized: false }
       }),
     }),
 
@@ -70,7 +71,8 @@ import { PaymentsModule } from './payment/payment.module';
     UsersModule,
     DiscountsModule,
     OrdersModule,
-    PaymentsModule
+    PaymentsModule,
+    HealthModule
 
   ],
   controllers: [],

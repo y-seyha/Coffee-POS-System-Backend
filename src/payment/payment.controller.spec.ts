@@ -1,15 +1,22 @@
 import { Test, TestingModule } from '@nestjs/testing';
-import { PaymentController } from './payment.controller';
+import { PaymentsController } from './payment.controller';
+import { PaymentsService } from './payment.service';
 
-describe('PaymentController', () => {
-  let controller: PaymentController;
+describe('PaymentsController', () => {
+  let controller: PaymentsController;
 
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
-      controllers: [PaymentController],
+      controllers: [PaymentsController],
+      providers: [
+        {
+          provide: PaymentsService,
+          useValue: { getPayments: jest.fn() },
+        }
+      ],
     }).compile();
 
-    controller = module.get<PaymentController>(PaymentController);
+    controller = module.get<PaymentsController>(PaymentsController);
   });
 
   it('should be defined', () => {

@@ -4,7 +4,7 @@ import {
     Get,
     HttpCode,
     HttpStatus,
-    Post,
+    Post, Req,
     Res,
     UseGuards,
 } from '@nestjs/common';
@@ -18,7 +18,7 @@ import {
     ApiTags,
 } from '@nestjs/swagger';
 
-import type {  Response } from 'express';
+// import type {  Response } from 'express';
 
 import { AuthService } from './auth.service';
 
@@ -30,6 +30,7 @@ import {ResendVerificationDto} from "./dto/resend_verify_email.dto";
 import {JwtAuthGuard} from "./guard/jwt-auth.guard";
 import {CurrentUser} from "./decorator/current_user.decorator";
 import {LoginThrottlerGuard} from "./guard/login-throttler.guard";
+import type { Request, Response } from 'express';
 
 
 @ApiTags('Authentication')
@@ -146,6 +147,17 @@ export class AuthController {
         return result;
     }
 
+    @Post('refresh')
+    @HttpCode(HttpStatus.OK)
+    async refresh(
+        @Req() req: Request,
+        @Res({ passthrough: true }) res: Response,
+    ) {
+        const token = req.cookies?.refresh_token;
+
+        return this.authService.refresh(token, res);
+    }
+
 
     @Post('resend-verification-email')
     @HttpCode(HttpStatus.OK)
@@ -211,14 +223,11 @@ export class AuthController {
         status: 200,
         description: 'Logout successful',
     })
+    @UseGuards(JwtAuthGuard)
     async logout(
-        @Res({ passthrough: true })
-        res: Response,
+        @CurrentUser() user: any,
+        @Res({ passthrough: true }) res: Response,
     ) {
-        res.clearCookie('access_token', getCookieOptions(),);
-
-        res.clearCookie('refresh_token', getCookieOptions(),);
-
-        return {message: 'Logout successful',};
+        return this.authService.logout(user.userId, res);
     }
 }

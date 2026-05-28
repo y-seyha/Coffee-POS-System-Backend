@@ -1,6 +1,6 @@
 import {
     BadRequestException, ForbiddenException,
-    Injectable,
+    Injectable, UnauthorizedException,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
@@ -13,6 +13,8 @@ import crypto from 'crypto';
 import {LoginDto} from "./dto/login.dto";
 import {VerifyEmailDto} from "./dto/verify_email.dto";
 import {MailerService} from "../utils/mailer";
+import {getCookieOptions} from "../utils/cookie_options";
+import type {Response } from 'express';
 
 @Injectable()
 export class AuthService {
@@ -136,10 +138,17 @@ export class AuthService {
             throw new ForbiddenException('Please verify your email first');
         }
 
+
         user.last_login_at = new Date();
         await this.userRepo.save(user);
 
         const tokens = this.generateToken(user);
+
+        const hashedRefresh = await bcrypt.hash(tokens.refreshToken, 10);
+
+        user.refresh_token_hash = hashedRefresh;
+
+        await this.userRepo.save(user);
 
         return {
             message: 'Login successful',
@@ -186,6 +195,61 @@ export class AuthService {
         };
     }
 
+    async refresh(refreshToken: string, res: Response) {
+        if (!refreshToken) {
+            throw new UnauthorizedException('No refresh token');
+        }
+
+        let payload: any;
+
+        try {
+            payload = this.jwtService.verify(refreshToken, {
+                secret: process.env.JWT_REFRESH_SECRET,
+            });
+        } catch {
+            throw new UnauthorizedException('Invalid refresh token');
+        }
+
+        const user = await this.userRepo.findOne({
+            where: { id: payload.userId },
+            relations: ['role'],
+        });
+
+        if (!user || !user.is_active) {
+            throw new UnauthorizedException('User not valid');
+        }
+
+        const isValid = await bcrypt.compare(
+            refreshToken,
+            user.refresh_token_hash || ''
+        );
+
+        if (!isValid) {
+            throw new UnauthorizedException('Refresh token revoked');
+        }
+
+
+        const tokens = this.generateToken(user);
+
+        user.refresh_token_hash = await bcrypt.hash(tokens.refreshToken, 10);
+
+        await this.userRepo.save(user);
+
+        res.cookie('access_token', tokens.accessToken, {
+            ...getCookieOptions(),
+            maxAge: 15 * 60 * 1000,
+        });
+
+        res.cookie('refresh_token', tokens.refreshToken, {
+            ...getCookieOptions(),
+            maxAge: 7 * 24 * 60 * 60 * 1000,
+        });
+
+        return {
+            message: 'Token refreshed',
+            accessToken: tokens.accessToken,
+        };
+    }
     async resendVerificationEmail(email: string) {
 
         const user = await this.userRepo.findOne({
@@ -227,21 +291,42 @@ export class AuthService {
     }
 
     private generateToken(user: User) {
-        // console.log('JWT SECRET USED:', process.env.JWT_SECRET);
         const payload = {
             userId: user.id,
             email: user.email,
             role: user.role?.name,
         };
 
-        return {
-            accessToken: this.jwtService.sign(payload, {
-                expiresIn: '15m',
-            }),
+        const accessToken = this.jwtService.sign(payload, {
+            secret: process.env.JWT_ACCESS_SECRET,
+            expiresIn: '15m',
+        });
 
-            refreshToken: this.jwtService.sign(payload, {
-                expiresIn: '7d',
-            }),
+        const refreshToken = this.jwtService.sign(payload, {
+            secret: process.env.JWT_REFRESH_SECRET,
+            expiresIn: '7d',
+        });
+
+        return { accessToken, refreshToken };
+    }
+
+    async logout(userId: number, res: Response) {
+        const user = await this.userRepo.findOne({
+            where: { id: userId },
+        });
+
+        if (user) {
+            //  invalidate refresh token
+            user.refresh_token_hash = null;
+            await this.userRepo.save(user);
+        }
+
+        // clear cookies
+        res.clearCookie('access_token', getCookieOptions());
+        res.clearCookie('refresh_token', getCookieOptions());
+
+        return {
+            message: 'Logout successful',
         };
     }
 }

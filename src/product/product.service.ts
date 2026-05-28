@@ -37,18 +37,70 @@ export class ProductService {
         private readonly fileUploadService: FileUploadService,
     ) {}
 
+    // async findAll(query: GetProductsQueryDto) {
+    //     try {
+    //         const { page = 1, limit = 10, search, sortBy = 'id', sortOrder = 'DESC', categoryId } = query;
+    //
+    //         const qb = this.productRepo.createQueryBuilder('product')
+    //             .leftJoinAndSelect('product.category', 'category')
+    //             .leftJoinAndSelect('product.images', 'images')
+    //             .leftJoinAndSelect('product.variant_groups', 'variant_groups')
+    //             .leftJoinAndSelect('product.discount', 'discount')
+    //             .skip((page - 1) * limit)
+    //             .take(limit)
+    //             .orderBy(`product.${sortBy}`, sortOrder as 'ASC' | 'DESC');
+    //
+    //         if (search) {
+    //             qb.andWhere(
+    //                 '(product.name ILIKE :search OR product.sku ILIKE :search)',
+    //                 { search: `%${search}%` },
+    //             );
+    //         }
+    //
+    //         if (categoryId) {
+    //             qb.andWhere('product.category_id = :categoryId', { categoryId });
+    //         }
+    //
+    //         const [items, total] = await qb.getManyAndCount();
+    //
+    //         this.logger.log(`Fetched products: ${items.length}`);
+    //
+    //         const data = items.map((p) => ({
+    //             ...p,
+    //             final_price: this.calculateFinalPrice(p),
+    //         }));
+    //
+    //         return {
+    //             data,
+    //             meta: {
+    //                 total,
+    //                 page,
+    //                 lastPage: Math.ceil(total / limit),
+    //             },
+    //         };
+    //     } catch (error) {
+    //         this.logger.error('Failed to fetch products', error.stack);
+    //         throw new BadRequestException('Failed to fetch products');
+    //     }
+    // }
+
     async findAll(query: GetProductsQueryDto) {
         try {
-            const { page = 1, limit = 10, search, sortBy = 'id', sortOrder = 'DESC', categoryId } = query;
+            const {
+                page = 1,
+                limit = 10,
+                search,
+                sortBy = 'id',
+                sortOrder = 'DESC',
+                categoryId,
+            } = query;
 
-            const qb = this.productRepo.createQueryBuilder('product')
+            const qb = this.productRepo
+                .createQueryBuilder('product')
                 .leftJoinAndSelect('product.category', 'category')
                 .leftJoinAndSelect('product.images', 'images')
                 .leftJoinAndSelect('product.variant_groups', 'variant_groups')
-                .leftJoinAndSelect('product.discount', 'discount')
-                .skip((page - 1) * limit)
-                .take(limit)
-                .orderBy(`product.${sortBy}`, sortOrder as 'ASC' | 'DESC');
+                .leftJoinAndSelect('product.discount', 'discount');
 
             if (search) {
                 qb.andWhere(
@@ -58,12 +110,26 @@ export class ProductService {
             }
 
             if (categoryId) {
-                qb.andWhere('product.category_id = :categoryId', { categoryId });
+                qb.andWhere('product.category_id = :categoryId', {
+                    categoryId,
+                });
             }
+
+            // IMPORTANT: apply pagination after filters
+            qb
+                .orderBy(`product.${sortBy}`, sortOrder as 'ASC' | 'DESC')
+                .skip((page - 1) * limit)
+                .take(limit);
 
             const [items, total] = await qb.getManyAndCount();
 
-            this.logger.log(`Fetched products: ${items.length}`);
+            const active = await this.productRepo.count({
+                where: { is_available: true },
+            });
+
+            const inactive = await this.productRepo.count({
+                where: { is_available: false },
+            });
 
             const data = items.map((p) => ({
                 ...p,
@@ -74,6 +140,8 @@ export class ProductService {
                 data,
                 meta: {
                     total,
+                    active,
+                    inactive,
                     page,
                     lastPage: Math.ceil(total / limit),
                 },

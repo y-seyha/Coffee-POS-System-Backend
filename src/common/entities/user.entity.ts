@@ -41,6 +41,9 @@ export class User extends BaseEntity {
     @Column({ type: 'timestamp', nullable: true })
     email_verification_expires: Date | null;
 
+    @Column({ type: 'text', nullable: true })
+    refresh_token_hash: string | null;
+
     @ManyToOne(() => Role, (role) => role.users, {
         nullable: false,
         onDelete: 'RESTRICT',
